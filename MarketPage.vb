@@ -25,7 +25,10 @@ Namespace PCLHarness.Market
         Private ReadOnly TabsPanel As StackPanel
         Private ReadOnly SearchBox As MyTextBox
         Private ReadOnly RefreshButton As MyButton
+        Private ReadOnly SelfPanel As StackPanel
         Private ReadOnly BusyIds As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        Private ReadOnly ProgressBars As New Dictionary(Of String, ProgressBar)(StringComparer.OrdinalIgnoreCase)
+        Private SelfBar As ProgressBar
 
         Private _keyword As String = ""
         Private _tab As String = "discover"
@@ -122,6 +125,9 @@ Namespace PCLHarness.Market
             ControlGrid.Children.Add(StatusText)
             Root.Children.Add(ControlCard)
 
+            SelfPanel = New StackPanel With {.Margin = New Thickness(0, 0, 0, 4)}
+            Root.Children.Add(SelfPanel)
+
             BannerPanel = New StackPanel With {.Margin = New Thickness(0, 0, 0, 4)}
             Root.Children.Add(BannerPanel)
 
@@ -139,12 +145,14 @@ Namespace PCLHarness.Market
 
             ' ---------- 订阅与生命周期 ----------
             AddHandler Owner.Changed, AddressOf OnOwnerChanged
+            AddHandler Owner.ProgressChanged, AddressOf OnOwnerProgress
             _subscribed = True
             AddHandler Me.Loaded,
                 Sub(Sender As Object, E As RoutedEventArgs)
                     _alive = True
                     If Not _subscribed Then
                         AddHandler Owner.Changed, AddressOf OnOwnerChanged
+                        AddHandler Owner.ProgressChanged, AddressOf OnOwnerProgress
                         _subscribed = True
                     End If
                     RenderAll()
@@ -154,6 +162,7 @@ Namespace PCLHarness.Market
                     _alive = False
                     If _subscribed Then
                         RemoveHandler Owner.Changed, AddressOf OnOwnerChanged
+                        RemoveHandler Owner.ProgressChanged, AddressOf OnOwnerProgress
                         _subscribed = False
                     End If
                 End Sub
@@ -166,11 +175,118 @@ Namespace PCLHarness.Market
             RenderAll()
         End Sub
 
+        Private Sub OnOwnerProgress(Sender As Object, E As EventArgs)
+            If Not _alive Then Return
+            For Each Pair In ProgressBars
+                Pair.Value.Value = Math.Round(Owner.GetInstallProgress(Pair.Key) * 100)
+            Next
+            If SelfBar IsNot Nothing Then
+                SelfBar.Value = Math.Round(Owner.SelfProgress * 100)
+            End If
+        End Sub
+
         Private Sub RenderAll()
             If Not _alive Then Return
             RenderStatus()
+            RenderSelfUpdate()
             RenderTabs()
             RenderList()
+        End Sub
+
+        ' ==================== 市场自更新 ====================
+
+        Private Sub RenderSelfUpdate()
+            SelfPanel.Children.Clear()
+            SelfBar = Nothing
+            If Not _alive Then Return
+            Dim Upd = Owner.SelfUpdate
+            If Upd Is Nothing AndAlso Not Owner.NeedRestart Then Return
+
+            Dim SelfId = GetSelfId()
+            Dim Installing = Owner.IsInstalling(SelfId)
+            Dim Card As New MyCard With {.Margin = New Thickness(0, 0, 0, 8)}
+            Dim Layout As New Grid With {.Margin = New Thickness(18, 14, 18, 14)}
+            Layout.ColumnDefinitions.Add(New ColumnDefinition With {.Width = New GridLength(1, GridUnitType.Star)})
+            Layout.ColumnDefinitions.Add(New ColumnDefinition With {.Width = GridLength.Auto})
+            Card.Children.Add(Layout)
+
+            Dim Left As New StackPanel()
+            Dim Title As New TextBlock With {
+                .Text = If(Owner.NeedRestart, "更新已就绪，重启后生效", "插件市场 v" & Upd.Version & " 可用"),
+                .FontSize = 14.5,
+                .FontWeight = FontWeights.SemiBold
+            }
+            Title.SetResourceReference(TextBlock.ForegroundProperty, "ColorBrush1")
+            Left.Children.Add(Title)
+
+            Dim Description As String
+            If Owner.NeedRestart Then
+                Description = "下载与安装已完成。关闭并重新启动启动器后，新版本才会加载。"
+            ElseIf Not String.IsNullOrWhiteSpace(Upd.Notes) Then
+                Description = Upd.Notes
+            Else
+                Description = "新版本已发布。更新会下载并校验 SHA-256，完成后提示重启。"
+            End If
+            Dim DescText = MakeText(Description, 12, "ColorBrushGray2")
+            DescText.TextWrapping = TextWrapping.Wrap
+            DescText.Margin = New Thickness(0, 4, 12, 0)
+            Left.Children.Add(DescText)
+
+            If Installing Then
+                SelfBar = New ProgressBar With {
+                    .Height = 6,
+                    .Minimum = 0,
+                    .Maximum = 100,
+                    .Value = Math.Round(Owner.SelfProgress * 100),
+                    .Margin = New Thickness(0, 8, 0, 0)
+                }
+                SelfBar.SetResourceReference(ProgressBar.ForegroundProperty, "ColorBrush1")
+                SelfBar.SetResourceReference(ProgressBar.BackgroundProperty, "ColorBrush7")
+                Left.Children.Add(SelfBar)
+            End If
+            Grid.SetColumn(Left, 0)
+            Layout.Children.Add(Left)
+
+            Dim Right As New StackPanel With {.Margin = New Thickness(16, 0, 0, 0)}
+            Grid.SetColumn(Right, 1)
+            Layout.Children.Add(Right)
+            If Owner.NeedRestart Then
+                Dim RestartButton = MakeButton("立即重启", True, False)
+                RestartButton.IsEnabled = Not Installing
+                AddHandler RestartButton.Click,
+                    Sub(Sender As Object, E As MouseButtonEventArgs)
+                        ConfirmRestart()
+                    End Sub
+                Right.Children.Add(RestartButton)
+            Else
+                Dim UpdateButton = MakeButton("更新", True, False)
+                UpdateButton.IsEnabled = Not Installing AndAlso Not BusyIds.Contains(SelfId)
+                If Installing Then UpdateButton.Text = "更新中…"
+                Dim TargetVersion = Upd.Version
+                AddHandler UpdateButton.Click,
+                    Sub(Sender As Object, E As MouseButtonEventArgs)
+                        BusyIds.Add(SelfId)
+                        RenderSelfUpdate()
+                        Owner.UpdateSelfAsync(
+                            Sub(Ok As Boolean, Message As String)
+                                BusyIds.Remove(SelfId)
+                                RenderAll()
+                            End Sub)
+                    End Sub
+                Right.Children.Add(UpdateButton)
+            End If
+            SelfPanel.Children.Add(Card)
+        End Sub
+
+        Private Sub ConfirmRestart()
+            Try
+                Dim Answer = Owner.Host.Ask("立即重启 PCL Harness？未保存的操作会丢失。", "重启启动器", "立即重启", "稍后")
+                If String.Equals(Answer, "立即重启", StringComparison.Ordinal) Then
+                    PCL.ModBase.RestartLauncher()
+                End If
+            Catch ex As Exception
+                Owner.Host.Hint("无法重启启动器：" & ex.Message, PCL.HintType.Red)
+            End Try
         End Sub
 
         ' ==================== 状态区 ====================
@@ -295,6 +411,7 @@ Namespace PCLHarness.Market
 
         Private Sub RenderList()
             If Not _alive OrElse ListPanel Is Nothing Then Return
+            ProgressBars.Clear()
             Dim St = Owner.GetState()
             Dim Entries As New List(Of MarketPluginEntry)
             If St.Index IsNot Nothing Then Entries = St.Index.Plugins
@@ -396,6 +513,7 @@ Namespace PCLHarness.Market
             If Latest.Size > 0 Then Meta.Add(MarketText.FormatSize(Latest.Size))
             Dim Published = MarketText.FormatDate(Latest.PublishedAt)
             If Published <> "" Then Meta.Add(Published)
+            If Entry.HasDownloads Then Meta.Add("下载 " & Entry.Downloads.Value.ToString("N0", Globalization.CultureInfo.InvariantCulture))
             If Not Compatible Then Meta.Add("需要 API v" & Latest.MinApiVersion.ToString())
             If Entry.Tags IsNot Nothing AndAlso Entry.Tags.Count > 0 Then Meta.Add("#" & String.Join(" #", Entry.Tags.ToArray()))
             If Meta.Count > 0 Then
@@ -487,6 +605,20 @@ Namespace PCLHarness.Market
             StateText.Margin = New Thickness(0, 0, 0, 2)
             Right.Children.Add(StateText)
 
+            If Owner.IsInstalling(Entry.Id) Then
+                Dim Bar As New ProgressBar With {
+                    .Height = 6,
+                    .Minimum = 0,
+                    .Maximum = 100,
+                    .Value = Math.Round(Owner.GetInstallProgress(Entry.Id) * 100),
+                    .Margin = New Thickness(0, 4, 0, 2)
+                }
+                Bar.SetResourceReference(ProgressBar.ForegroundProperty, "ColorBrush1")
+                Bar.SetResourceReference(ProgressBar.BackgroundProperty, "ColorBrush7")
+                ProgressBars(Entry.Id) = Bar
+                Right.Children.Add(Bar)
+            End If
+
 
             If Not IsSelf Then
                 If Inst Is Nothing Then
@@ -577,12 +709,6 @@ Namespace PCLHarness.Market
         ' ==================== 操作 ====================
 
         Private Sub BeginInstall(Entry As MarketPluginEntry, Release As MarketRelease, IsUpdate As Boolean, Optional Inst As PCL.PluginSummary = Nothing)
-            If IsUpdate AndAlso Inst IsNot Nothing AndAlso Inst.Loaded Then
-                Owner.Host.Message("更新插件",
-                    "「" & Entry.DisplayName & "」正在运行，插件文件被启动器占用，现在无法覆盖更新。" & vbCrLf & vbCrLf &
-                    "请先在「插件」页禁用它，关闭并重新启动启动器，再回到这里更新；更新完成后可重新启用。")
-                Return
-            End If
 
             Dim Prompt As String
             If IsUpdate Then
@@ -596,12 +722,12 @@ Namespace PCLHarness.Market
             If Owner.Host.Ask(Prompt, Title, "继续", "取消") <> "继续" Then Return
 
             BusyIds.Add(Entry.Id)
-            RenderList()
             Owner.InstallAsync(Entry, Release,
                 Sub(Ok As Boolean, Message As String)
                     BusyIds.Remove(Entry.Id)
                     RenderAll()
                 End Sub)
+            RenderList()
         End Sub
 
         Private Sub BeginUninstall(Entry As MarketPluginEntry, Inst As PCL.PluginSummary)

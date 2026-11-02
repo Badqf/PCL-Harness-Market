@@ -79,6 +79,22 @@ https://raw.githubusercontent.com/Badqf/PCL-Harness-Market/main/index.json
 | `download` | string | 是 | 安装包的 http(s) 绝对地址。推荐使用 GitHub Release 的稳定下载地址。 |
 | `notes` | string | 否 | 本版本更新说明，展示在详情里。 |
 
+### `downloads`（可选）
+
+由维护脚本根据 GitHub Release 资产的 `download_count` 汇总而来，客户端只读显示：
+
+```json
+"downloads": { "total": 42, "updatedAt": "2026-11-02T14:43:24Z", "source": "github-release" }
+```
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `total` | integer | 该插件所有 Release 资产的累计下载量。 |
+| `updatedAt` | string | 统计时间，ISO 8601 UTC。 |
+| `source` | string | 计数来源，目前固定为 `github-release`。 |
+
+缺失 `downloads` 时卡片不显示下载量，不会补 0。计数只覆盖 GitHub Release 资产；仓库内直链、镜像流量与 raw 请求都不计入。
+
 > 生成脚本额外支持 `latest.package`：填一个相对于条目文件的本地 `.pclplugin` 路径，
 > 脚本会自动计算并校验 `size` / `sha256`，生成根索引时会移除这个字段。`index.json`
 > 本身不接受 `package` 字段。

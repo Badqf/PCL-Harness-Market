@@ -1,4 +1,4 @@
-Imports System
+﻿Imports System
 Imports System.Collections.Generic
 Imports System.Globalization
 Imports System.IO
@@ -111,8 +111,27 @@ Namespace PCLHarness.Market
             Throw New MarketException("无法获取插件索引。" & vbCrLf & String.Join(vbCrLf, Errors.ToArray()))
         End Function
 
+        Public Function FetchSelfUpdate(IndexUrl As String, PreferMirror As Boolean, Ctx As PCL.PluginTaskContext) As MarketRelease
+            If String.IsNullOrWhiteSpace(IndexUrl) Then Return Nothing
+            Dim Base As Uri = Nothing
+            If Not Uri.TryCreate(IndexUrl, UriKind.Absolute, Base) Then Return Nothing
+            Dim Target As Uri = Nothing
+            If Not Uri.TryCreate(Base, "update.json", Target) Then Return Nothing
+            For Each Url In BuildCandidates(Target.AbsoluteUri, PreferMirror)
+                Ctx.ThrowIfCancelled()
+                Try
+                    Dim Raw = Host.HttpGetString(Url)
+                    Dim Dict = MarketJson.AsDict(MarketJson.DeserializeObject(Raw))
+                    Dim Release = MarketRelease.Parse(Dict)
+                    If Release IsNot Nothing AndAlso Release.HasHash AndAlso Release.HasDownload Then Return Release
+                Catch
+                End Try
+            Next
+            Return Nothing
+        End Function
+
         ''' <summary>下载并安装一个版本；返回底层导入结果。</summary>
-        Public Function Install(Entry As MarketPluginEntry, Release As MarketRelease, IndexUrl As String, PreferMirror As Boolean, Ctx As PCL.PluginTaskContext) As MarketInstallResult
+        Public Function Install(Entry As MarketPluginEntry, Release As MarketRelease, IndexUrl As String, PreferMirror As Boolean, Ctx As PCL.PluginTaskContext, Optional Progress As Action(Of Double) = Nothing) As MarketInstallResult
             If Entry Is Nothing OrElse Release Is Nothing Then Throw New MarketException("插件信息不完整")
             If Not Release.HasHash Then Throw New MarketException("索引没有提供这个版本的 SHA-256，按安全策略不能安装。")
             If Not Release.HasDownload Then Throw New MarketException("索引里的下载地址无效。")
@@ -134,16 +153,17 @@ Namespace PCLHarness.Market
                         Try
                             If File.Exists(TmpPath) Then File.Delete(TmpPath)
                             Ctx.Report(0.15 + 0.4 * I / Math.Max(1, Candidates.Count), "正在下载：" & HostOf(Url))
-                            If Not Host.HttpDownload(Url, TmpPath) OrElse Not File.Exists(TmpPath) Then
-                                Throw New MarketException("下载失败")
-                            End If
+                            DownloadWithProgress(Url, TmpPath, Release.Size, Progress, Ctx)
+                            If Not File.Exists(TmpPath) Then Throw New MarketException("下载失败")
                             Ctx.Report(0.6, "正在校验 SHA-256…")
+                            If Progress IsNot Nothing Then Progress(0.6)
                             Dim Actual = ComputeSha256(TmpPath)
                             If Not String.Equals(Actual, Release.Sha256, StringComparison.OrdinalIgnoreCase) Then
                                 Throw New MarketException("SHA-256 不匹配（期望 " & MarketText.ShortHash(Release.Sha256) & "，实际 " & MarketText.ShortHash(Actual) & "）")
                             End If
                             If File.Exists(PackagePath) Then File.Delete(PackagePath)
                             File.Move(TmpPath, PackagePath)
+                            If Progress IsNot Nothing Then Progress(0.82)
                             Downloaded = True
                             Exit For
                         Catch ex As MarketException
@@ -159,6 +179,7 @@ Namespace PCLHarness.Market
 
                 Ctx.ThrowIfCancelled()
                 Ctx.Report(0.85, "正在安装 " & Entry.DisplayName & " v" & Release.Version & "…")
+                If Progress IsNot Nothing Then Progress(0.85)
                 Dim Import As PCL.PluginImportResult = Nothing
                 Try
                     Import = Host.Plugins.ImportPackage(PackagePath, True)
@@ -168,6 +189,7 @@ Namespace PCLHarness.Market
                 If Import Is Nothing OrElse Not Import.Success Then
                     Throw New MarketException("安装失败：" & DescribeImport(Import))
                 End If
+                If Progress IsNot Nothing Then Progress(1.0)
                 Return New MarketInstallResult With {.Import = Import, .PackagePath = PackagePath}
             End SyncLock
         End Function
@@ -231,6 +253,34 @@ Namespace PCLHarness.Market
             If Uri.TryCreate(Url, UriKind.Absolute, UriValue) Then Return UriValue.Host
             Return Url
         End Function
+
+        Private Sub DownloadWithProgress(Url As String, Target As String, ExpectedSize As Long, Progress As Action(Of Double), Ctx As PCL.PluginTaskContext)
+            Dim Failure As Exception = Nothing
+            Dim Worker As New Thread(Sub()
+                                         Try
+                                             If Not Host.HttpDownload(Url, Target) Then Failure = New MarketException("下载失败")
+                                         Catch Ex As Exception
+                                             Failure = Ex
+                                         End Try
+                                     End Sub)
+            Worker.IsBackground = True
+            Worker.Start()
+            While Worker.IsAlive
+                Dim Fraction As Double = 0
+                Try
+                    If File.Exists(Target) AndAlso ExpectedSize > 0 Then
+                        Fraction = Math.Min(1.0, CDbl(New FileInfo(Target).Length) / CDbl(ExpectedSize))
+                    End If
+                Catch
+                End Try
+                If Progress IsNot Nothing Then Progress(0.15 + 0.45 * Fraction)
+                Ctx.Report(0.15 + 0.45 * Fraction, "正在下载 " & CInt(Fraction * 100) & "%…")
+                Worker.Join(150)
+            End While
+            Worker.Join()
+            Ctx.ThrowIfCancelled()
+            If Failure IsNot Nothing Then Throw Failure
+        End Sub
 
         Private Shared Function Friendly(Ex As Exception) As String
             If TypeOf Ex Is UnauthorizedAccessException Then Return "没有网络权限：" & Ex.Message

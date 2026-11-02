@@ -62,6 +62,21 @@ if (-not (Test-Path -LiteralPath $sourceFull -PathType Container)) {
     Fail "找不到条目目录：$sourceFull"
 }
 
+$downloadsFull = Join-Path $rootFull 'downloads.json'
+$downloadsMap = @{}
+if (Test-Path -LiteralPath $downloadsFull -PathType Leaf) {
+    try {
+        $downloadsRaw = [System.IO.File]::ReadAllText($downloadsFull, [System.Text.Encoding]::UTF8)
+        $downloadsObj = $downloadsRaw | ConvertFrom-Json
+        foreach ($prop in $downloadsObj.PSObject.Properties) {
+            $downloadsMap[$prop.Name] = $prop.Value
+        }
+    }
+    catch {
+        Fail "downloads.json 不是有效的 JSON：$($_.Exception.Message)"
+    }
+}
+
 $files = @(Get-ChildItem -LiteralPath $sourceFull -Filter '*.json' -File | Sort-Object Name)
 $entries = New-Object System.Collections.ArrayList
 $errors = New-Object System.Collections.ArrayList
@@ -175,6 +190,17 @@ foreach ($file in $files) {
             sha256       = $sha
             download     = $download
             notes        = [string](As-Property $latest 'notes')
+        }
+    }
+    $dl = $downloadsMap[$id]
+    if ($null -ne $dl) {
+        $total = [long]-1
+        if ([long]::TryParse([string](As-Property $dl 'total'), [ref]$total) -and $total -ge 0) {
+            $entry.downloads = [ordered]@{
+                total     = $total
+                updatedAt = [string](As-Property $dl 'updatedAt')
+                source    = [string](As-Property $dl 'source')
+            }
         }
     }
     [void]$entries.Add([pscustomobject]$entry)

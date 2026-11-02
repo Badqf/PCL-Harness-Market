@@ -1,4 +1,4 @@
-Imports System
+﻿Imports System
 Imports System.Collections.Generic
 Imports System.Globalization
 Imports System.Text
@@ -103,6 +103,13 @@ Namespace PCLHarness.Market
         Public Property Tags As New List(Of String)
         Public Property Featured As Boolean
         Public Property Latest As MarketRelease
+        Public Property Downloads As Long?
+
+        Public ReadOnly Property HasDownloads As Boolean
+            Get
+                Return Downloads.HasValue
+            End Get
+        End Property
 
         Public ReadOnly Property DisplayName As String
             Get
@@ -135,6 +142,18 @@ Namespace PCLHarness.Market
             Entry.License = MarketJson.AsString(Dict, "license").Trim()
             Entry.Tags = MarketJson.AsStringList(Dict, "tags")
             Entry.Featured = MarketJson.AsBool(Dict, "featured")
+            Dim DownloadsValue As Object = Nothing
+            If Dict.TryGetValue("downloads", DownloadsValue) AndAlso DownloadsValue IsNot Nothing Then
+                Dim DownloadsDict = MarketJson.AsDict(DownloadsValue)
+                If DownloadsDict IsNot Nothing Then
+                    Entry.Downloads = MarketJson.AsLong(DownloadsDict, "total", 0)
+                Else
+                    Dim Direct As Long = 0
+                    If Long.TryParse(Convert.ToString(DownloadsValue, CultureInfo.InvariantCulture), Direct) Then
+                        Entry.Downloads = Direct
+                    End If
+                End If
+            End If
             Dim LatestValue As Object = Nothing
             If Not Dict.TryGetValue("latest", LatestValue) Then Return Nothing
             Dim LatestDict = MarketJson.AsDict(LatestValue)

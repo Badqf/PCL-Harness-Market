@@ -1,4 +1,4 @@
-Imports System
+﻿Imports System
 Imports System.Collections.Generic
 Imports System.Linq
 Imports System.Windows
@@ -32,6 +32,12 @@ Namespace PCLHarness.Market
         Private _fetching As Boolean
         Private _unloaded As Boolean
         Private _pageInfo As PCL.PluginPageInfo
+        Private ReadOnly ProgressGate As New Object()
+        Private ReadOnly _progress As New Dictionary(Of String, Double)(StringComparer.OrdinalIgnoreCase)
+        Private ReadOnly _installing As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        Private _selfUpdate As MarketRelease
+        Private _selfProgress As Double
+        Private _needRestart As Boolean
 
         Private ReadOnly Property FavoritesPath As String
             Get
@@ -40,6 +46,47 @@ Namespace PCLHarness.Market
         End Property
 
         Friend Property Client As MarketClient
+
+        Friend ReadOnly Property SelfUpdate As MarketRelease
+            Get
+                SyncLock StateGate
+                    Return _selfUpdate
+                End SyncLock
+            End Get
+        End Property
+
+        Friend ReadOnly Property SelfProgress As Double
+            Get
+                SyncLock ProgressGate
+                    Return _selfProgress
+                End SyncLock
+            End Get
+        End Property
+
+        Friend ReadOnly Property NeedRestart As Boolean
+            Get
+                SyncLock ProgressGate
+                    Return _needRestart
+                End SyncLock
+            End Get
+        End Property
+
+        Friend Event ProgressChanged As EventHandler
+
+        Friend Function IsInstalling(Id As String) As Boolean
+            If String.IsNullOrEmpty(Id) Then Return False
+            SyncLock ProgressGate
+                Return _installing.Contains(Id)
+            End SyncLock
+        End Function
+
+        Friend Function GetInstallProgress(Id As String) As Double
+            SyncLock ProgressGate
+                Dim Value As Double = 0
+                If _progress.TryGetValue(Id, Value) Then Return Value
+                Return 0
+            End SyncLock
+        End Function
 
         Public Overrides Sub OnLoad(Host As PCL.PluginHost)
             MyBase.OnLoad(Host)
@@ -65,6 +112,7 @@ Namespace PCLHarness.Market
             If Host.GetSetting(Of Boolean)("autoRefresh", True) Then
                 FetchAsync(False)
             End If
+            CheckSelfUpdateAsync()
             DevLog("插件市场已加载")
         End Sub
 
@@ -306,27 +354,129 @@ Namespace PCLHarness.Market
             NotifyChanged()
         End Sub
 
+        ' ==================== 市场自更新 ====================
+
+        Friend Sub CheckSelfUpdateAsync()
+            If _unloaded Then Return
+            Try
+                Host.Tasks.Run("检查插件市场更新", Sub(Ctx) CheckSelfWorker(Ctx))
+            Catch
+            End Try
+        End Sub
+
+        Private Sub CheckSelfWorker(Ctx As PCL.PluginTaskContext)
+            Dim Url = Host.GetSetting(Of String)("indexUrl", MarketClient.DefaultIndexUrl)
+            Dim Prefer = Host.GetSetting(Of Boolean)("preferMirror", True)
+            Dim Release As MarketRelease = Nothing
+            Try
+                Release = Client.FetchSelfUpdate(Url, Prefer, Ctx)
+            Catch
+                Return
+            End Try
+            If Release Is Nothing Then Return
+            If MarketText.CompareVersion(Host.Info.Version, Release.Version) >= 0 Then Return
+            SyncLock StateGate
+                _selfUpdate = Release
+            End SyncLock
+            Try
+                Host.LogInfo("发现插件市场新版本：" & Release.Version)
+            Catch
+            End Try
+            NotifyChanged()
+        End Sub
+
+        Friend Sub UpdateSelfAsync(Done As Action(Of Boolean, String))
+            Dim Release = SelfUpdate
+            If Release Is Nothing Then Return
+            Dim Entry As New MarketPluginEntry With {
+                .Id = Host.Info.Id,
+                .Name = Host.Info.Name,
+                .Author = Host.Info.Author,
+                .Latest = Release
+            }
+            InstallAsync(Entry, Release, Done)
+        End Sub
+
+        Private Sub SetInstalling(Id As String, Value As Boolean)
+            If String.IsNullOrEmpty(Id) Then Return
+            SyncLock ProgressGate
+                If Value Then
+                    _installing.Add(Id)
+                    If String.Equals(Id, Host.Info.Id, StringComparison.OrdinalIgnoreCase) Then _selfProgress = 0
+                Else
+                    _installing.Remove(Id)
+                    _progress.Remove(Id)
+                End If
+            End SyncLock
+            RaiseProgress()
+        End Sub
+
+        Private Sub ReportProgress(Id As String, Value As Double)
+            If String.IsNullOrEmpty(Id) Then Return
+            SyncLock ProgressGate
+                _progress(Id) = Math.Max(0, Math.Min(1, Value))
+                _selfProgress = If(String.Equals(Id, Host.Info.Id, StringComparison.OrdinalIgnoreCase), _progress(Id), _selfProgress)
+            End SyncLock
+            RaiseProgress()
+        End Sub
+
+        Private Sub RaiseProgress()
+            Try
+                Host.RunInUi(Sub()
+                                 Try
+                                     RaiseEvent ProgressChanged(Me, EventArgs.Empty)
+                                 Catch
+                                 End Try
+                             End Sub)
+            Catch
+            End Try
+        End Sub
+
+        Private Shared Function ImportNeedsRestart(Import As PCL.PluginImportResult) As Boolean
+            If Import Is Nothing Then Return False
+            Try
+                Dim Prop = Import.GetType().GetProperty("NeedRestart")
+                If Prop IsNot Nothing Then Return CBool(Prop.GetValue(Import, Nothing))
+            Catch
+            End Try
+            Return String.Equals(Import.Message, "NEED_RESTART", StringComparison.OrdinalIgnoreCase)
+        End Function
+
         ' ==================== 安装 / 卸载 / 启用 ====================
 
         Friend Sub InstallAsync(Entry As MarketPluginEntry, Release As MarketRelease, Done As Action(Of Boolean, String))
             If Entry Is Nothing OrElse Release Is Nothing Then Return
+            Dim IsSelf = String.Equals(Entry.Id, Host.Info.Id, StringComparison.OrdinalIgnoreCase)
             Dim Url = Host.GetSetting(Of String)("indexUrl", MarketClient.DefaultIndexUrl)
             Dim Prefer = Host.GetSetting(Of Boolean)("preferMirror", True)
+            Dim Existing = Client.FindInstalled(Entry.Id)
+            SetInstalling(Entry.Id, True)
             Try
                 Host.Tasks.Run("安装 " & Entry.DisplayName, Sub(Ctx)
                                                                    Dim Ok As Boolean = False
                                                                    Dim Message As String = ""
                                                                    Try
-                                                                       Dim Result = Client.Install(Entry, Release, Url, Prefer, Ctx)
+                                                                       Dim Result = Client.Install(Entry, Release, Url, Prefer, Ctx, Sub(Value) ReportProgress(Entry.Id, Value))
                                                                        Ok = True
-                                                                       Message = Entry.DisplayName & " v" & Release.Version & " 已安装，默认未启用。"
-                                                                       If Result IsNot Nothing AndAlso Result.Import IsNot Nothing Then
-                                                                           Message = Entry.DisplayName & " v" & Result.Import.Version & " 已安装，默认未启用。"
+                                                                       Dim Import = If(Result Is Nothing, Nothing, Result.Import)
+                                                                       If ImportNeedsRestart(Import) Then
+                                                                           MarkNeedRestart(IsSelf)
+                                                                           Message = Entry.DisplayName & " 更新已就绪，重启启动器后生效。"
+                                                                       ElseIf Import IsNot Nothing Then
+                                                                           If Existing IsNot Nothing Then
+                                                                               Message = Entry.DisplayName & " 已更新到 v" & Import.Version & "。"
+                                                                           Else
+                                                                               Message = Entry.DisplayName & " v" & Import.Version & " 已安装，默认未启用。"
+                                                                           End If
+                                                                       Else
+                                                                           Message = Entry.DisplayName & " v" & Release.Version & " 已安装。"
                                                                        End If
                                                                    Catch ex As MarketException
                                                                        Message = ex.Message
                                                                    Catch ex As Exception
                                                                        Message = "安装失败：" & ex.Message
+                                                                   Finally
+                                                                       SetInstalling(Entry.Id, False)
                                                                    End Try
                                                                    RunOnUi(Sub()
                                                                                If Ok Then
@@ -339,11 +489,23 @@ Namespace PCLHarness.Market
                                                                            End Sub)
                                                                End Sub)
             Catch ex As Exception
+                SetInstalling(Entry.Id, False)
                 Host.Hint("无法启动安装任务：" & ex.Message, PCL.HintType.Red)
                 Done(False, ex.Message)
             End Try
         End Sub
 
+        Private Sub MarkNeedRestart(IsSelf As Boolean)
+            SyncLock ProgressGate
+                _needRestart = True
+            End SyncLock
+            If IsSelf Then
+                SyncLock StateGate
+                    _selfUpdate = Nothing
+                End SyncLock
+            End If
+            RaiseProgress()
+        End Sub
         Friend Sub UninstallAsync(Id As String, DisplayName As String, Done As Action(Of Boolean, String))
             Try
                 Host.Tasks.Run("卸载 " & DisplayName, Sub(Ctx)

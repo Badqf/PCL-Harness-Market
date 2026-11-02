@@ -23,3 +23,5 @@ _dev/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+/downloads.json
