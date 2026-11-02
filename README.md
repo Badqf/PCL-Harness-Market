@@ -6,6 +6,10 @@
 
 ![插件市场页面](docs/screenshots/market.png)
 
+| 自更新提示 | 下载进度 |
+| --- | --- |
+| ![自更新提示](docs/screenshots/self-update.png) | ![下载进度](docs/screenshots/progress.png) |
+
 ## 功能
 
 - **索引发现**：从可配置的 JSON 索引读取插件列表，支持搜索、标签展示与精选优先排序；顶部横向分类「发现 / 收藏 / 已安装 / 已禁用」。
