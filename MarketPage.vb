@@ -22,12 +22,13 @@ Namespace PCLHarness.Market
         Private ReadOnly BannerPanel As StackPanel
         Private ReadOnly StatusText As TextBlock
         Private ReadOnly SubtitleText As TextBlock
+        Private ReadOnly TabsPanel As StackPanel
         Private ReadOnly SearchBox As MyTextBox
-        Private ReadOnly OnlyInstalled As MyCheckBox
         Private ReadOnly RefreshButton As MyButton
         Private ReadOnly BusyIds As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
 
         Private _keyword As String = ""
+        Private _tab As String = "discover"
         Private _expandedId As String = ""
         Private _alive As Boolean = True
         Private _subscribed As Boolean
@@ -50,10 +51,17 @@ Namespace PCLHarness.Market
             SubtitleText.Margin = New Thickness(0, 4, 0, 0)
             Root.Children.Add(SubtitleText)
 
+            ' ---------- 分类标签 ----------
+            TabsPanel = New StackPanel With {
+                .Orientation = Orientation.Horizontal,
+                .Margin = New Thickness(0, 14, 0, 0)
+            }
+            Root.Children.Add(TabsPanel)
+
             ' ---------- 工具栏 ----------
             Dim Toolbar As New StackPanel With {
                 .Orientation = Orientation.Horizontal,
-                .Margin = New Thickness(0, 16, 0, 8)
+                .Margin = New Thickness(0, 10, 0, 8)
             }
             SearchBox = New MyTextBox With {
                 .Width = 300,
@@ -69,17 +77,6 @@ Namespace PCLHarness.Market
                     RenderList()
                 End Sub
             Toolbar.Children.Add(SearchBox)
-
-            OnlyInstalled = New MyCheckBox With {
-                .Text = "仅看已安装",
-                .VerticalAlignment = VerticalAlignment.Center,
-                .Margin = New Thickness(0, 0, 14, 0)
-            }
-            AddHandler OnlyInstalled.Change,
-                Sub(Sender As Object, User As Boolean)
-                    RenderList()
-                End Sub
-            Toolbar.Children.Add(OnlyInstalled)
 
             RefreshButton = New MyButton With {
                 .Text = "刷新",
@@ -146,6 +143,7 @@ Namespace PCLHarness.Market
         Private Sub RenderAll()
             If Not _alive Then Return
             RenderStatus()
+            RenderTabs()
             RenderList()
         End Sub
 
@@ -202,26 +200,123 @@ Namespace PCLHarness.Market
             BannerPanel.Children.Add(Box)
         End Sub
 
-        ' ==================== 列表 ====================
+        ' ==================== 分类与列表 ====================
+
+        Private Function GetSelfId() As String
+            If Owner.Host Is Nothing OrElse Owner.Host.Info Is Nothing Then Return ""
+            Return If(Owner.Host.Info.Id, "")
+        End Function
+
+        Private Function IsSameId(A As String, B As String) As Boolean
+            Return Not String.IsNullOrEmpty(A) AndAlso String.Equals(A, B, StringComparison.OrdinalIgnoreCase)
+        End Function
+
+        Private Function GetInstalledMap() As Dictionary(Of String, PCL.PluginSummary)
+            Dim Map As New Dictionary(Of String, PCL.PluginSummary)(StringComparer.OrdinalIgnoreCase)
+            Dim SelfId = GetSelfId()
+            Try
+                For Each One In Owner.Client.ListInstalled()
+                    If One IsNot Nothing AndAlso Not String.IsNullOrEmpty(One.Id) AndAlso Not IsSameId(One.Id, SelfId) Then
+                        Map(One.Id) = One
+                    End If
+                Next
+            Catch
+            End Try
+            Return Map
+        End Function
+
+        Private Sub RenderTabs()
+            If Not _alive OrElse TabsPanel Is Nothing Then Return
+            Dim St = Owner.GetState()
+            Dim Entries As New List(Of MarketPluginEntry)
+            If St.Index IsNot Nothing Then Entries = St.Index.Plugins
+            Dim Map = GetInstalledMap()
+            Dim SelfId = GetSelfId()
+
+            Dim DiscoverCount = Entries.Where(Function(E) E IsNot Nothing AndAlso Not IsSameId(E.Id, SelfId)).Count()
+            Dim EnabledCount = Map.Values.Where(Function(X) X.Enabled).Count()
+            Dim DisabledCount = Map.Values.Where(Function(X) Not X.Enabled).Count()
+
+            Dim Ids As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+            For Each Entry In Entries
+                If Entry IsNot Nothing AndAlso Not IsSameId(Entry.Id, SelfId) Then Ids.Add(Entry.Id)
+            Next
+            For Each Id In Map.Keys
+                Ids.Add(Id)
+            Next
+            Dim FavoriteCount = Ids.Where(Function(Id) Owner.IsFavorite(Id)).Count()
+
+            TabsPanel.Children.Clear()
+            TabsPanel.Children.Add(MakeTab("发现", DiscoverCount, "discover"))
+            TabsPanel.Children.Add(MakeTab("收藏", FavoriteCount, "favorites"))
+            TabsPanel.Children.Add(MakeTab("已安装", EnabledCount, "installed"))
+            TabsPanel.Children.Add(MakeTab("已禁用", DisabledCount, "disabled"))
+        End Sub
+
+        Private Function MakeTab(Text As String, Count As Integer, Key As String) As MyButton
+            Dim Value As New MyButton With {
+                .Text = Text & " " & Count.ToString(),
+                .Height = 32,
+                .MinWidth = 0,
+                .Padding = New Thickness(16, 0, 16, 0),
+                .Margin = New Thickness(0, 0, 8, 0)
+            }
+            If String.Equals(_tab, Key, StringComparison.OrdinalIgnoreCase) Then
+                Value.ColorType = MyButton.ColorState.Highlight
+            End If
+            AddHandler Value.Click,
+                Sub(Sender As Object, E As MouseButtonEventArgs)
+                    _tab = Key
+                    _expandedId = ""
+                    RenderAll()
+                End Sub
+            Return Value
+        End Function
+
+        Private Function BuildLocalEntry(Inst As PCL.PluginSummary) As MarketPluginEntry
+            Return New MarketPluginEntry With {
+                .Id = If(Inst.Id, ""),
+                .Name = If(Inst.Name, ""),
+                .Summary = If(Inst.Description, ""),
+                .Description = If(Inst.Description, ""),
+                .Author = If(Inst.Author, ""),
+                .Latest = New MarketRelease With {
+                    .Version = If(Inst.Version, ""),
+                    .MinApiVersion = Inst.MinApiVersion
+                }
+            }
+        End Function
 
         Private Sub RenderList()
             If Not _alive OrElse ListPanel Is Nothing Then Return
             Dim St = Owner.GetState()
             Dim Entries As New List(Of MarketPluginEntry)
             If St.Index IsNot Nothing Then Entries = St.Index.Plugins
+            Dim InstalledMap = GetInstalledMap()
+            Dim SelfId = GetSelfId()
 
-            Dim InstalledMap As New Dictionary(Of String, PCL.PluginSummary)(StringComparer.OrdinalIgnoreCase)
-            Try
-                For Each One In Owner.Client.ListInstalled()
-                    If One IsNot Nothing AndAlso Not String.IsNullOrEmpty(One.Id) Then InstalledMap(One.Id) = One
-                Next
-            Catch
-            End Try
+            Dim All As New List(Of MarketPluginEntry)
+            Dim IndexIds As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+            For Each Entry In Entries
+                If Entry IsNot Nothing Then
+                    IndexIds.Add(Entry.Id)
+                    If Entry.Latest IsNot Nothing AndAlso Not IsSameId(Entry.Id, SelfId) Then All.Add(Entry)
+                End If
+            Next
+            For Each Pair In InstalledMap
+                If Not IndexIds.Contains(Pair.Key) Then All.Add(BuildLocalEntry(Pair.Value))
+            Next
 
-            Dim Shown = Entries.Where(Function(E) E IsNot Nothing AndAlso E.Latest IsNot Nothing AndAlso E.Matches(_keyword)).ToList()
-            If OnlyInstalled.Checked Then
-                Shown = Shown.Where(Function(E) InstalledMap.ContainsKey(E.Id)).ToList()
-            End If
+            Dim Shown = All.Where(Function(E) E IsNot Nothing AndAlso E.Matches(_keyword)).ToList()
+            Select Case _tab
+                Case "favorites"
+                    Shown = Shown.Where(Function(E) Owner.IsFavorite(E.Id)).ToList()
+                Case "installed"
+                    Shown = Shown.Where(Function(E) InstalledMap.ContainsKey(E.Id) AndAlso InstalledMap(E.Id).Enabled).ToList()
+                Case "disabled"
+                    Shown = Shown.Where(Function(E) InstalledMap.ContainsKey(E.Id) AndAlso Not InstalledMap(E.Id).Enabled).ToList()
+            End Select
+
             Shown.Sort(
                 Function(A, B)
                     If A.Featured <> B.Featured Then Return If(A.Featured, -1, 1)
@@ -235,8 +330,14 @@ Namespace PCLHarness.Market
                     Empty = "正在读取索引…"
                 ElseIf St.Index Is Nothing Then
                     Empty = "索引还没有加载。"
-                ElseIf Not String.IsNullOrEmpty(_keyword) OrElse OnlyInstalled.Checked Then
-                    Empty = "没有匹配的插件。换个关键词，或取消「仅看已安装」。"
+                ElseIf _tab = "favorites" Then
+                    Empty = "还没有收藏的插件。点卡片上的「☆ 收藏」，把插件留在这里。"
+                ElseIf _tab = "installed" Then
+                    Empty = "还没有已启用的插件。"
+                ElseIf _tab = "disabled" Then
+                    Empty = "没有已禁用的插件。"
+                ElseIf Not String.IsNullOrEmpty(_keyword) Then
+                    Empty = "没有匹配的插件。换个关键词试试。"
                 Else
                     Empty = "索引里还没有插件。"
                 End If
@@ -387,7 +488,17 @@ Namespace PCLHarness.Market
             StateText.Margin = New Thickness(0, 0, 0, 2)
             Right.Children.Add(StateText)
 
-            Dim Buttons As String = "" ' 防呆：后续都用局部变量，避免误用
+            Dim FavoriteText = If(Owner.IsFavorite(Entry.Id), "★ 已收藏", "☆ 收藏")
+            Dim FavoriteButton = MakeButton(FavoriteText, False, False)
+            FavoriteButton.Height = 28
+            FavoriteButton.Margin = New Thickness(0, 4, 0, 0)
+            FavoriteButton.IsEnabled = Not Busy
+            AddHandler FavoriteButton.Click,
+                Sub(Sender As Object, E As MouseButtonEventArgs)
+                    Owner.ToggleFavorite(Entry.Id)
+                    RenderAll()
+                End Sub
+            Right.Children.Add(FavoriteButton)
 
             If Not IsSelf Then
                 If Inst Is Nothing Then

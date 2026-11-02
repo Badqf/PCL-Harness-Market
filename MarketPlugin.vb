@@ -26,10 +26,18 @@ Namespace PCLHarness.Market
             "M3,4 L21,4 L21,9 L19,9 L19,21 L5,21 L5,9 L3,9 Z M7,9 L7,17 L17,17 L17,9 Z M9,4 L9,2 L15,2 L15,4"
 
         Private ReadOnly StateGate As New Object()
+        Private ReadOnly FavoritesGate As New Object()
+        Private ReadOnly _favorites As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
         Private _state As New MarketState()
         Private _fetching As Boolean
         Private _unloaded As Boolean
         Private _pageInfo As PCL.PluginPageInfo
+
+        Private ReadOnly Property FavoritesPath As String
+            Get
+                Return System.IO.Path.Combine(DataFolder, "favorites.txt")
+            End Get
+        End Property
 
         Friend Property Client As MarketClient
 
@@ -37,6 +45,7 @@ Namespace PCLHarness.Market
             MyBase.OnLoad(Host)
             _unloaded = False
             Client = New MarketClient(Host)
+            LoadFavorites()
 
             Dim Cached = Client.ReadCached()
             If Cached IsNot Nothing Then
@@ -74,6 +83,54 @@ Namespace PCLHarness.Market
         Private Sub OnPluginChanged(Id As String, Version As String)
             If String.Equals(Id, Host.Info.Id, StringComparison.OrdinalIgnoreCase) Then Return
             NotifyChanged()
+        End Sub
+
+        ' ==================== 收藏 ====================
+
+        Friend Function IsFavorite(Id As String) As Boolean
+            If String.IsNullOrEmpty(Id) Then Return False
+            SyncLock FavoritesGate
+                Return _favorites.Contains(Id)
+            End SyncLock
+        End Function
+
+        Friend Sub ToggleFavorite(Id As String)
+            If String.IsNullOrEmpty(Id) Then Return
+            SyncLock FavoritesGate
+                If Not _favorites.Remove(Id) Then _favorites.Add(Id)
+            End SyncLock
+            SaveFavorites()
+            NotifyChanged()
+        End Sub
+
+        Private Sub LoadFavorites()
+            Try
+                If Not Host.FileExists(FavoritesPath) Then Return
+                Dim Text = Host.ReadTextFile(FavoritesPath)
+                If String.IsNullOrEmpty(Text) Then Return
+                For Each Line In Text.Split(New String() {vbCrLf, vbLf}, StringSplitOptions.RemoveEmptyEntries)
+                    Dim Value = Line.Trim()
+                    If Value.Length > 0 Then
+                        SyncLock FavoritesGate
+                            _favorites.Add(Value)
+                        End SyncLock
+                    End If
+                Next
+            Catch Ex As Exception
+                DevLog("读取收藏失败：" & Ex.Message)
+            End Try
+        End Sub
+
+        Private Sub SaveFavorites()
+            Try
+                Dim Lines As String()
+                SyncLock FavoritesGate
+                    Lines = _favorites.OrderBy(Function(X) X, StringComparer.OrdinalIgnoreCase).ToArray()
+                End SyncLock
+                Host.WriteTextFile(FavoritesPath, String.Join(vbCrLf, Lines))
+            Catch Ex As Exception
+                DevLog("保存收藏失败：" & Ex.Message)
+            End Try
         End Sub
 
         ' ==================== 页与设置 ====================
