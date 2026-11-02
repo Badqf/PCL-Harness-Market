@@ -204,7 +204,7 @@ Namespace PCLHarness.Market
 
             Dim SelfId = GetSelfId()
             Dim Installing = Owner.IsInstalling(SelfId)
-            Dim Card As New MyCard With {.Margin = New Thickness(0, 0, 0, 8)}
+            Dim Card As New MyCard With {.Margin = New Thickness(0, 0, 0, 6)}
             Dim Layout As New Grid With {.Margin = New Thickness(18, 14, 18, 14)}
             Layout.ColumnDefinitions.Add(New ColumnDefinition With {.Width = New GridLength(1, GridUnitType.Star)})
             Layout.ColumnDefinitions.Add(New ColumnDefinition With {.Width = GridLength.Auto})
@@ -330,7 +330,7 @@ Namespace PCLHarness.Market
             Dim Box As New Border With {
                 .CornerRadius = New CornerRadius(5),
                 .Padding = New Thickness(12, 9, 12, 9),
-                .Margin = New Thickness(0, 0, 0, 8)
+                .Margin = New Thickness(0, 0, 0, 6)
             }
             If IsError Then
                 Box.SetResourceReference(Border.BackgroundProperty, "ColorBrushRedBack")
@@ -478,14 +478,14 @@ Namespace PCLHarness.Market
             Dim Compatible = Latest.MinApiVersion <= CurrentApiVersion
             Dim Installable = Compatible AndAlso Latest.HasHash AndAlso Latest.HasDownload
 
-            Dim Card As New MyCard With {.Margin = New Thickness(0, 0, 0, 8)}
-            Dim GridMain As New Grid With {.Margin = New Thickness(18, 12, 18, 12)}
+            Dim Card As New MyCard With {.Margin = New Thickness(0, 0, 0, 6)}
+            Dim GridMain As New Grid With {.Margin = New Thickness(18, 10, 18, 10)}
             GridMain.ColumnDefinitions.Add(New ColumnDefinition With {.Width = New GridLength(1, GridUnitType.Star)})
             GridMain.ColumnDefinitions.Add(New ColumnDefinition With {.Width = GridLength.Auto})
             Card.Children.Add(GridMain)
 
             ' ---------- 左列 ----------
-            Dim Left As New StackPanel With {.Margin = New Thickness(0, 0, 18, 0)}
+            Dim Left As New StackPanel With {.Margin = New Thickness(0, 0, 12, 0)}
             Grid.SetColumn(Left, 0)
             GridMain.Children.Add(Left)
 
@@ -525,7 +525,7 @@ Namespace PCLHarness.Market
             Dim Summary As String = If(Not String.IsNullOrEmpty(Entry.Summary), Entry.Summary, Entry.Description)
             If Not String.IsNullOrEmpty(Summary) Then
                 Dim SummaryText = MakeText(Summary, 12, "ColorBrushGray2")
-                SummaryText.Margin = New Thickness(0, 7, 0, 0)
+                SummaryText.Margin = New Thickness(0, 5, 0, 0)
                 SummaryText.MaxWidth = 720
                 Left.Children.Add(SummaryText)
             End If
@@ -573,7 +573,7 @@ Namespace PCLHarness.Market
             End If
 
             ' ---------- 右列 ----------
-            Dim Right As New StackPanel With {.MinWidth = 144, .VerticalAlignment = VerticalAlignment.Top}
+            Dim Right As New StackPanel With {.MinWidth = 210, .VerticalAlignment = VerticalAlignment.Top}
             Grid.SetColumn(Right, 1)
             GridMain.Children.Add(Right)
 
@@ -619,89 +619,83 @@ Namespace PCLHarness.Market
                 Right.Children.Add(Bar)
             End If
 
+            Dim Actions As New StackPanel With {
+                .Orientation = Orientation.Horizontal,
+                .HorizontalAlignment = HorizontalAlignment.Right,
+                .Margin = New Thickness(0, 6, 0, 0)
+            }
+            Right.Children.Add(Actions)
 
             If Not IsSelf Then
+                Dim FavoriteButton = MakeIconButton(If(Owner.IsFavorite(Entry.Id), "★", "☆"),
+                                                    If(Owner.IsFavorite(Entry.Id), "取消收藏", "收藏"))
+                FavoriteButton.IsEnabled = Not Busy
+                AddHandler FavoriteButton.Click,
+                    Sub(Sender As Object, E As MouseButtonEventArgs)
+                        Owner.ToggleFavorite(Entry.Id)
+                        RenderAll()
+                    End Sub
+                Actions.Children.Add(FavoriteButton)
+
                 If Inst Is Nothing Then
                     If Installable Then
-                        Dim InstallButton = MakeButton("安装", True, False)
+                        Dim InstallButton = MakeIconButton("↓", "安装 v" & Latest.Version, True, False)
                         InstallButton.IsEnabled = Not Busy
                         AddHandler InstallButton.Click,
                             Sub(Sender As Object, E As MouseButtonEventArgs)
                                 BeginInstall(Entry, Latest, False)
                             End Sub
-                        Right.Children.Add(InstallButton)
-                    ElseIf Not Compatible Then
-                        Dim Blocked = MakeButton("需要更新的启动器", False, False)
-                        Blocked.IsEnabled = False
-                        Right.Children.Add(Blocked)
+                        Actions.Children.Add(InstallButton)
                     Else
-                        Dim Blocked = MakeButton("暂不可安装", False, False)
+                        Dim Blocked = MakeIconButton("↓", "当前不可安装", False, False)
                         Blocked.IsEnabled = False
-                        Right.Children.Add(Blocked)
+                        Actions.Children.Add(Blocked)
                     End If
                 Else
                     If Compare < 0 Then
                         If Installable Then
-                            Dim UpdateButton = MakeButton("更新", True, False)
+                            Dim UpdateButton = MakeIconButton("↑", "更新到 v" & Latest.Version, True, False)
                             UpdateButton.IsEnabled = Not Busy
                             AddHandler UpdateButton.Click,
                                 Sub(Sender As Object, E As MouseButtonEventArgs)
                                     BeginInstall(Entry, Latest, True, Inst)
                                 End Sub
-                            Right.Children.Add(UpdateButton)
-                        ElseIf Not Compatible Then
-                            Dim Blocked = MakeButton("需要更新的启动器", False, False)
-                            Blocked.IsEnabled = False
-                            Right.Children.Add(Blocked)
+                            Actions.Children.Add(UpdateButton)
                         Else
-                            Dim Blocked = MakeButton("新版本不可安装", False, False)
+                            Dim Blocked = MakeIconButton("↑", "新版本不可安装", False, False)
                             Blocked.IsEnabled = False
-                            Right.Children.Add(Blocked)
+                            Actions.Children.Add(Blocked)
                         End If
                     End If
 
-                    Dim ToggleText = If(Inst.Enabled, "禁用", "启用")
-                    Dim ToggleButton = MakeButton(ToggleText, False, False)
+                    Dim ToggleButton = MakeIconButton(If(Inst.Enabled, "⏸", "▶"),
+                                                     If(Inst.Enabled, "禁用", "启用"), False, False)
                     ToggleButton.IsEnabled = Not Busy
                     AddHandler ToggleButton.Click,
                         Sub(Sender As Object, E As MouseButtonEventArgs)
                             BeginToggle(Entry, Inst, Not Inst.Enabled)
                         End Sub
-                    Right.Children.Add(ToggleButton)
+                    Actions.Children.Add(ToggleButton)
 
-                    Dim RemoveButton = MakeButton("卸载", False, True)
+                    Dim RemoveButton = MakeIconButton("×", "卸载", False, True)
                     RemoveButton.IsEnabled = Not Busy
                     AddHandler RemoveButton.Click,
                         Sub(Sender As Object, E As MouseButtonEventArgs)
                             BeginUninstall(Entry, Inst)
                         End Sub
-                    Right.Children.Add(RemoveButton)
+                    Actions.Children.Add(RemoveButton)
                 End If
-
-                Dim DetailsButton = MakeButton(If(_expandedId = Entry.Id, "收起", "详情"), False, False)
-                DetailsButton.IsEnabled = Not Busy
-                AddHandler DetailsButton.Click,
-                    Sub(Sender As Object, E As MouseButtonEventArgs)
-                        _expandedId = If(_expandedId = Entry.Id, "", Entry.Id)
-                        RenderList()
-                    End Sub
-                Right.Children.Add(DetailsButton)
-
-                Dim FavoriteLink As New TextBlock With {
-                    .Text = If(Owner.IsFavorite(Entry.Id), "★ 已收藏", "☆ 收藏"),
-                    .FontSize = 11,
-                    .Cursor = Cursors.Hand,
-                    .HorizontalAlignment = HorizontalAlignment.Right,
-                    .Margin = New Thickness(0, 8, 0, 2)
-                }
-                FavoriteLink.SetResourceReference(TextBlock.ForegroundProperty, "ColorBrushGray2")
-                AddHandler FavoriteLink.MouseLeftButtonUp,
-                    Sub(Sender As Object, E As MouseButtonEventArgs)
-                        Owner.ToggleFavorite(Entry.Id)
-                        RenderAll()
-                    End Sub
-                Right.Children.Add(FavoriteLink)
             End If
+
+            Dim DetailsButton = MakeIconButton(If(_expandedId = Entry.Id, "‹", "…"),
+                                               If(_expandedId = Entry.Id, "收起详情", "查看详情"))
+            DetailsButton.IsEnabled = Not Busy
+            AddHandler DetailsButton.Click,
+                Sub(Sender As Object, E As MouseButtonEventArgs)
+                    _expandedId = If(_expandedId = Entry.Id, "", Entry.Id)
+                    RenderList()
+                End Sub
+            Actions.Children.Add(DetailsButton)
 
             Return Card
         End Function
@@ -779,6 +773,25 @@ Namespace PCLHarness.Market
             Return Value
         End Function
 
+        Private Shared Function MakeIconButton(Glyph As String, Tip As String, Optional Highlight As Boolean = False, Optional Danger As Boolean = False) As MyButton
+            Dim Value As New MyButton With {
+                .Text = Glyph,
+                .Width = 34,
+                .MinWidth = 34,
+                .Height = 30,
+                .Padding = New Thickness(0),
+                .Margin = New Thickness(4, 0, 0, 0),
+                .HorizontalAlignment = HorizontalAlignment.Right
+            }
+            If Danger Then
+                Value.ColorType = MyButton.ColorState.Red
+            ElseIf Highlight Then
+                Value.ColorType = MyButton.ColorState.Highlight
+            End If
+            ToolTipService.SetToolTip(Value, Tip)
+            ToolTipService.SetShowOnDisabled(Value, True)
+            Return Value
+        End Function
         Private Shared Function MakeButton(Content As String, Highlight As Boolean, Danger As Boolean) As MyButton
             Dim Value As New MyButton With {
                 .Text = Content,

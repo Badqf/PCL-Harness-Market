@@ -1,10 +1,10 @@
 {
     "schema":  1,
-    "version":  "0.1.4",
+    "version":  "0.1.5",
     "minApiVersion":  6,
-    "publishedAt":  "2026-11-02T14:44:25Z",
-    "size":  32152,
-    "sha256":  "c39744088528bec8e474dc3eaf2959f1cb44b52dba319277016adb633bc8b9d2",
-    "download":  "https://github.com/Badqf/PCL-Harness-Market/releases/download/v0.1.4/pcl-harness-market-0.1.4.pclplugin",
-    "notes":  "下载量统计、下载进度条、市场自更新与「需要重启」提示；需要 PCL Harness 3.7.4 的排队更新支持。"
+    "publishedAt":  "2026-11-02T15:37:00Z",
+    "size":  32354,
+    "sha256":  "28371e5fb3d7aed42e298a23f659fe18d1e2f889d3819d9c2ad72272aa38364c",
+    "download":  "https://github.com/Badqf/PCL-Harness-Market/releases/download/v0.1.5/pcl-harness-market-0.1.5.pclplugin",
+    "notes":  "图标操作、悬浮按钮名称与更紧凑的列表卡片；功能与 0.1.4 一致。"
 }
