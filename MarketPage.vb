@@ -1,4 +1,4 @@
-Imports System
+﻿Imports System
 Imports System.Collections.Generic
 Imports System.Linq
 Imports System.Windows
@@ -51,24 +51,39 @@ Namespace PCLHarness.Market
             SubtitleText.Margin = New Thickness(0, 4, 0, 0)
             Root.Children.Add(SubtitleText)
 
-            ' ---------- 分类标签 ----------
+            ' ---------- 控制卡 ----------
+            Dim ControlCard As New MyCard With {.Margin = New Thickness(0, 16, 0, 12)}
+            Dim ControlGrid As New Grid With {.Margin = New Thickness(16, 12, 16, 10)}
+            ControlGrid.ColumnDefinitions.Add(New ColumnDefinition With {.Width = New GridLength(1, GridUnitType.Star)})
+            ControlGrid.ColumnDefinitions.Add(New ColumnDefinition With {.Width = GridLength.Auto})
+            ControlGrid.RowDefinitions.Add(New RowDefinition With {.Height = GridLength.Auto})
+            ControlGrid.RowDefinitions.Add(New RowDefinition With {.Height = GridLength.Auto})
+            ControlGrid.RowDefinitions.Add(New RowDefinition With {.Height = GridLength.Auto})
+            ControlCard.Children.Add(ControlGrid)
+
             TabsPanel = New StackPanel With {
                 .Orientation = Orientation.Horizontal,
-                .Margin = New Thickness(0, 14, 0, 0)
+                .VerticalAlignment = VerticalAlignment.Center
             }
-            Root.Children.Add(TabsPanel)
+            Grid.SetRow(TabsPanel, 0)
+            Grid.SetColumn(TabsPanel, 0)
+            ControlGrid.Children.Add(TabsPanel)
 
-            ' ---------- 工具栏 ----------
-            Dim Toolbar As New StackPanel With {
+            Dim ToolsPanel As New StackPanel With {
                 .Orientation = Orientation.Horizontal,
-                .Margin = New Thickness(0, 10, 0, 8)
+                .VerticalAlignment = VerticalAlignment.Center
             }
+            Grid.SetRow(ToolsPanel, 0)
+            Grid.SetColumn(ToolsPanel, 1)
+            ControlGrid.Children.Add(ToolsPanel)
+
             SearchBox = New MyTextBox With {
-                .Width = 300,
-                .Height = 34,
-                .FontSize = 12.5,
+                .Width = 240,
+                .Height = 30,
+                .FontSize = 12,
+                .CornerRadius = New CornerRadius(6),
                 .VerticalContentAlignment = VerticalAlignment.Center,
-                .Margin = New Thickness(0, 0, 10, 0),
+                .Margin = New Thickness(0, 0, 8, 0),
                 .HintText = "搜索插件、作者或标签"
             }
             AddHandler SearchBox.TextChanged,
@@ -76,25 +91,36 @@ Namespace PCLHarness.Market
                     _keyword = If(SearchBox.Text, "").Trim()
                     RenderList()
                 End Sub
-            Toolbar.Children.Add(SearchBox)
+            ToolsPanel.Children.Add(SearchBox)
 
             RefreshButton = New MyButton With {
                 .Text = "刷新",
-                .Height = 32,
-                .MinWidth = 84,
-                .Padding = New Thickness(16, 0, 16, 0),
+                .Height = 30,
+                .MinWidth = 72,
+                .Padding = New Thickness(14, 0, 14, 0),
                 .VerticalAlignment = VerticalAlignment.Center
             }
             AddHandler RefreshButton.Click,
                 Sub(Sender As Object, E As MouseButtonEventArgs)
                     Owner.FetchAsync(True)
                 End Sub
-            Toolbar.Children.Add(RefreshButton)
-            Root.Children.Add(Toolbar)
+            ToolsPanel.Children.Add(RefreshButton)
+
+            Dim Divider As New Border With {
+                .Height = 1,
+                .Margin = New Thickness(0, 10, 0, 8),
+                .Opacity = 0.7
+            }
+            Divider.SetResourceReference(Border.BackgroundProperty, "ColorBrush6")
+            Grid.SetRow(Divider, 1)
+            Grid.SetColumnSpan(Divider, 2)
+            ControlGrid.Children.Add(Divider)
 
             StatusText = MakeText("", 11, "ColorBrushGray3")
-            StatusText.Margin = New Thickness(0, 0, 0, 12)
-            Root.Children.Add(StatusText)
+            Grid.SetRow(StatusText, 2)
+            Grid.SetColumnSpan(StatusText, 2)
+            ControlGrid.Children.Add(StatusText)
+            Root.Children.Add(ControlCard)
 
             BannerPanel = New StackPanel With {.Margin = New Thickness(0, 0, 0, 4)}
             Root.Children.Add(BannerPanel)
@@ -163,13 +189,13 @@ Namespace PCLHarness.Market
             RefreshButton.IsEnabled = Not St.Loading
             RefreshButton.Text = If(St.Loading, "刷新中…", "刷新")
 
-            Dim InstalledCount = 0
-            Try
-                InstalledCount = Owner.Client.ListInstalled().Count
-                If InstalledCount > 0 Then InstalledCount -= 1 ' 自己
-            Catch
-            End Try
-            SubtitleText.Text = "从社区索引发现、安装和管理 PCL Harness 插件。已安装 " & Math.Max(0, InstalledCount) & " 个。"
+            Dim MarketInstalled = 0
+            If St.Index IsNot Nothing Then
+                Dim InstalledMap = GetInstalledMap()
+                Dim SelfId = GetSelfId()
+                MarketInstalled = St.Index.Plugins.Where(Function(E) E IsNot Nothing AndAlso Not IsSameId(E.Id, SelfId) AndAlso InstalledMap.ContainsKey(E.Id)).Count()
+            End If
+            SubtitleText.Text = "从社区索引发现、安装和管理 PCL Harness 插件。市场里已安装 " & Math.Max(0, MarketInstalled) & " 个。"
 
             BannerPanel.Children.Clear()
             If Not String.IsNullOrEmpty(St.ErrorText) Then
@@ -232,19 +258,12 @@ Namespace PCLHarness.Market
             If St.Index IsNot Nothing Then Entries = St.Index.Plugins
             Dim Map = GetInstalledMap()
             Dim SelfId = GetSelfId()
+            Dim MarketEntries = Entries.Where(Function(E) E IsNot Nothing AndAlso Not IsSameId(E.Id, SelfId)).ToList()
 
-            Dim DiscoverCount = Entries.Where(Function(E) E IsNot Nothing AndAlso Not IsSameId(E.Id, SelfId)).Count()
-            Dim EnabledCount = Map.Values.Where(Function(X) X.Enabled).Count()
-            Dim DisabledCount = Map.Values.Where(Function(X) Not X.Enabled).Count()
-
-            Dim Ids As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
-            For Each Entry In Entries
-                If Entry IsNot Nothing AndAlso Not IsSameId(Entry.Id, SelfId) Then Ids.Add(Entry.Id)
-            Next
-            For Each Id In Map.Keys
-                Ids.Add(Id)
-            Next
-            Dim FavoriteCount = Ids.Where(Function(Id) Owner.IsFavorite(Id)).Count()
+            Dim DiscoverCount = MarketEntries.Count
+            Dim EnabledCount = MarketEntries.Where(Function(E) Map.ContainsKey(E.Id) AndAlso Map(E.Id).Enabled).Count()
+            Dim DisabledCount = MarketEntries.Where(Function(E) Map.ContainsKey(E.Id) AndAlso Not Map(E.Id).Enabled).Count()
+            Dim FavoriteCount = MarketEntries.Where(Function(E) Owner.IsFavorite(E.Id)).Count()
 
             TabsPanel.Children.Clear()
             TabsPanel.Children.Add(MakeTab("发现", DiscoverCount, "discover"))
@@ -273,19 +292,6 @@ Namespace PCLHarness.Market
             Return Value
         End Function
 
-        Private Function BuildLocalEntry(Inst As PCL.PluginSummary) As MarketPluginEntry
-            Return New MarketPluginEntry With {
-                .Id = If(Inst.Id, ""),
-                .Name = If(Inst.Name, ""),
-                .Summary = If(Inst.Description, ""),
-                .Description = If(Inst.Description, ""),
-                .Author = If(Inst.Author, ""),
-                .Latest = New MarketRelease With {
-                    .Version = If(Inst.Version, ""),
-                    .MinApiVersion = Inst.MinApiVersion
-                }
-            }
-        End Function
 
         Private Sub RenderList()
             If Not _alive OrElse ListPanel Is Nothing Then Return
@@ -296,15 +302,8 @@ Namespace PCLHarness.Market
             Dim SelfId = GetSelfId()
 
             Dim All As New List(Of MarketPluginEntry)
-            Dim IndexIds As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
             For Each Entry In Entries
-                If Entry IsNot Nothing Then
-                    IndexIds.Add(Entry.Id)
-                    If Entry.Latest IsNot Nothing AndAlso Not IsSameId(Entry.Id, SelfId) Then All.Add(Entry)
-                End If
-            Next
-            For Each Pair In InstalledMap
-                If Not IndexIds.Contains(Pair.Key) Then All.Add(BuildLocalEntry(Pair.Value))
+                If Entry IsNot Nothing AndAlso Entry.Latest IsNot Nothing AndAlso Not IsSameId(Entry.Id, SelfId) Then All.Add(Entry)
             Next
 
             Dim Shown = All.Where(Function(E) E IsNot Nothing AndAlso E.Matches(_keyword)).ToList()
@@ -331,18 +330,18 @@ Namespace PCLHarness.Market
                 ElseIf St.Index Is Nothing Then
                     Empty = "索引还没有加载。"
                 ElseIf _tab = "favorites" Then
-                    Empty = "还没有收藏的插件。点卡片上的「☆ 收藏」，把插件留在这里。"
+                    Empty = "还没有收藏市场里的插件。点卡片下方的「☆ 收藏」，把插件留在这里。"
                 ElseIf _tab = "installed" Then
-                    Empty = "还没有已启用的插件。"
+                    Empty = "市场里的插件还没有已启用的。"
                 ElseIf _tab = "disabled" Then
-                    Empty = "没有已禁用的插件。"
+                    Empty = "市场里的插件没有已禁用的。"
                 ElseIf Not String.IsNullOrEmpty(_keyword) Then
                     Empty = "没有匹配的插件。换个关键词试试。"
                 Else
                     Empty = "索引里还没有插件。"
                 End If
                 Dim HintText = MakeText(Empty, 12, "ColorBrushGray2")
-                HintText.Margin = New Thickness(0, 10, 0, 0)
+                HintText.Margin = New Thickness(0, 8, 0, 2)
                 ListPanel.Children.Add(HintText)
                 Return
             End If
@@ -362,8 +361,8 @@ Namespace PCLHarness.Market
             Dim Compatible = Latest.MinApiVersion <= CurrentApiVersion
             Dim Installable = Compatible AndAlso Latest.HasHash AndAlso Latest.HasDownload
 
-            Dim Card As New MyCard With {.Margin = New Thickness(0, 0, 0, 10)}
-            Dim GridMain As New Grid With {.Margin = New Thickness(18, 14, 18, 14)}
+            Dim Card As New MyCard With {.Margin = New Thickness(0, 0, 0, 8)}
+            Dim GridMain As New Grid With {.Margin = New Thickness(18, 12, 18, 12)}
             GridMain.ColumnDefinitions.Add(New ColumnDefinition With {.Width = New GridLength(1, GridUnitType.Star)})
             GridMain.ColumnDefinitions.Add(New ColumnDefinition With {.Width = GridLength.Auto})
             Card.Children.Add(GridMain)
@@ -374,7 +373,7 @@ Namespace PCLHarness.Market
             GridMain.Children.Add(Left)
 
             Dim TitleRow As New StackPanel With {.Orientation = Orientation.Horizontal}
-            Dim NameText = MakeText(Entry.DisplayName, 15, "ColorBrush1")
+            Dim NameText = MakeText(Entry.DisplayName, 14.5, "ColorBrush1")
             NameText.FontWeight = FontWeights.SemiBold
             NameText.Margin = New Thickness(0, 0, 8, 0)
             TitleRow.Children.Add(NameText)
@@ -407,7 +406,7 @@ Namespace PCLHarness.Market
 
             Dim Summary As String = If(Not String.IsNullOrEmpty(Entry.Summary), Entry.Summary, Entry.Description)
             If Not String.IsNullOrEmpty(Summary) Then
-                Dim SummaryText = MakeText(Summary, 12.5, "ColorBrushGray2")
+                Dim SummaryText = MakeText(Summary, 12, "ColorBrushGray2")
                 SummaryText.Margin = New Thickness(0, 7, 0, 0)
                 SummaryText.MaxWidth = 720
                 Left.Children.Add(SummaryText)
@@ -415,7 +414,7 @@ Namespace PCLHarness.Market
 
             If _expandedId = Entry.Id Then
                 If Not String.IsNullOrEmpty(Entry.Description) AndAlso Entry.Description <> Summary Then
-                    Dim DescriptionText = MakeText(Entry.Description, 12, "ColorBrushGray2")
+                    Dim DescriptionText = MakeText(Entry.Description, 11.5, "ColorBrushGray2")
                     DescriptionText.Margin = New Thickness(0, 8, 0, 0)
                     DescriptionText.MaxWidth = 720
                     Left.Children.Add(DescriptionText)
@@ -456,7 +455,7 @@ Namespace PCLHarness.Market
             End If
 
             ' ---------- 右列 ----------
-            Dim Right As New StackPanel With {.MinWidth = 132, .VerticalAlignment = VerticalAlignment.Top}
+            Dim Right As New StackPanel With {.MinWidth = 144, .VerticalAlignment = VerticalAlignment.Top}
             Grid.SetColumn(Right, 1)
             GridMain.Children.Add(Right)
 
@@ -488,17 +487,6 @@ Namespace PCLHarness.Market
             StateText.Margin = New Thickness(0, 0, 0, 2)
             Right.Children.Add(StateText)
 
-            Dim FavoriteText = If(Owner.IsFavorite(Entry.Id), "★ 已收藏", "☆ 收藏")
-            Dim FavoriteButton = MakeButton(FavoriteText, False, False)
-            FavoriteButton.Height = 28
-            FavoriteButton.Margin = New Thickness(0, 4, 0, 0)
-            FavoriteButton.IsEnabled = Not Busy
-            AddHandler FavoriteButton.Click,
-                Sub(Sender As Object, E As MouseButtonEventArgs)
-                    Owner.ToggleFavorite(Entry.Id)
-                    RenderAll()
-                End Sub
-            Right.Children.Add(FavoriteButton)
 
             If Not IsSelf Then
                 If Inst Is Nothing Then
@@ -566,6 +554,21 @@ Namespace PCLHarness.Market
                         RenderList()
                     End Sub
                 Right.Children.Add(DetailsButton)
+
+                Dim FavoriteLink As New TextBlock With {
+                    .Text = If(Owner.IsFavorite(Entry.Id), "★ 已收藏", "☆ 收藏"),
+                    .FontSize = 11,
+                    .Cursor = Cursors.Hand,
+                    .HorizontalAlignment = HorizontalAlignment.Right,
+                    .Margin = New Thickness(0, 8, 0, 2)
+                }
+                FavoriteLink.SetResourceReference(TextBlock.ForegroundProperty, "ColorBrushGray2")
+                AddHandler FavoriteLink.MouseLeftButtonUp,
+                    Sub(Sender As Object, E As MouseButtonEventArgs)
+                        Owner.ToggleFavorite(Entry.Id)
+                        RenderAll()
+                    End Sub
+                Right.Children.Add(FavoriteLink)
             End If
 
             Return Card
