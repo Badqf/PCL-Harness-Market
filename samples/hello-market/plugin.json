@@ -1,0 +1,13 @@
+{
+  "id": "hello-market",
+  "name": "你好，市场",
+  "version": "1.0.0",
+  "author": "Badqf",
+  "description": "插件市场的示例插件：加载时在日志与左下角打个招呼，用来验证索引、下载、校验与安装流程。",
+  "entry": "HelloMarket.HelloMarketPlugin",
+  "dll": "HelloMarket.dll",
+  "homepage": "https://github.com/Badqf/PCL-Harness-Market",
+  "license": "PCL 分发有限许可",
+  "minApiVersion": 6,
+  "permissions": []
+}

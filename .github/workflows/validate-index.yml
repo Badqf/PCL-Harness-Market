@@ -1,0 +1,29 @@
+name: Validate index
+
+on:
+  push:
+    paths:
+      - 'index/**'
+      - 'index.json'
+      - 'tools/make-index.ps1'
+      - '.github/workflows/validate-index.yml'
+  pull_request:
+    paths:
+      - 'index/**'
+      - 'index.json'
+      - 'tools/make-index.ps1'
+      - '.github/workflows/validate-index.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate index entries
+        shell: pwsh
+        run: ./tools/make-index.ps1 -Check

@@ -1,0 +1,25 @@
+# 构建产物
+dist/
+bin/
+obj/
+*.dll
+*.pdb
+*.pclplugin
+*.user
+
+# 示例插件的安装包需要随仓库分发
+!index/packages/
+!index/packages/*.pclplugin
+
+# 本地测试夹具（索引、安装包、测试插件）
+_dev/
+
+# 编辑器
+.vs/
+.vscode/
+.idea/
+
+# 系统
+.DS_Store
+Thumbs.db
+desktop.ini

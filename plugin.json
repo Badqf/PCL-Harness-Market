@@ -1,0 +1,27 @@
+{
+  "id": "pcl-harness-market",
+  "name": "插件市场",
+  "version": "0.1.0",
+  "author": "Badqf",
+  "description": "浏览、安装与更新 PCL Harness 插件：社区索引、镜像回退、SHA-256 校验与离线缓存。",
+  "entry": "PCLHarness.Market.MarketPlugin",
+  "dll": "PCLHarness.Market.dll",
+  "homepage": "https://github.com/Badqf/PCL-Harness-Market",
+  "license": "PCL 分发有限许可",
+  "minApiVersion": 6,
+  "permissions": {
+    "ui": true,
+    "events": true,
+    "plugins": true,
+    "net": {
+      "hosts": [
+        "raw.githubusercontent.com",
+        "github.com",
+        "objects.githubusercontent.com",
+        "ghfast.top",
+        "gh-proxy.com"
+      ]
+    },
+    "net.dynamic": true
+  }
+}
