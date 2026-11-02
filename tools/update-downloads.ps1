@@ -28,6 +28,7 @@ param(
 )
 
 if ([string]::IsNullOrWhiteSpace($Root)) { $Root = Split-Path $PSScriptRoot -Parent }
+if (-not [IO.Path]::IsPathRooted($Root)) { $Root = [IO.Path]::GetFullPath((Join-Path (Get-Location).Path $Root)) }
 $ErrorActionPreference = 'Stop'
 
 function Fail([string]$Message) {
