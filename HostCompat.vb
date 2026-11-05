@@ -1,4 +1,4 @@
-Imports System
+﻿Imports System
 Imports System.Globalization
 Imports System.Reflection
 Imports PCL
@@ -76,9 +76,9 @@ Namespace PCLHarness.Market
             End Select
         End Function
 
-        ''' <summary>0=未签名 1=已签名 2=签名无效 3=未知发布者；旧宿主返回 0。</summary>
+        ''' <summary>0=未签名 1=已签名 2=签名无效 3=未知发布者；旧宿主没有该属性时返回 -1。</summary>
         Public Shared Function SignatureStatus(Info As PCL.PluginSummary) As Integer
-            If Info Is Nothing Then Return 0
+            If Info Is Nothing Then Return -1
             Try
                 Dim Prop = Info.GetType().GetProperty("SignatureStatus")
                 If Prop IsNot Nothing Then
@@ -86,7 +86,7 @@ Namespace PCLHarness.Market
                 End If
             Catch
             End Try
-            Return 0
+            Return -1
         End Function
 
         Public Shared Function SignatureText(Status As Integer) As String

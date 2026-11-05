@@ -1,10 +1,10 @@
 {
     "schema":  1,
-    "version":  "0.1.6",
+    "version":  "0.1.7",
     "minApiVersion":  6,
-    "publishedAt":  "2026-11-05T04:52:39Z",
-    "size":  34095,
-    "sha256":  "6da55dd77ae7380815fb493f1bf69a35374244a60e43619bc222d5df2b52c7c0",
-    "download":  "https://github.com/Badqf/PCL-Harness-Market/releases/download/v0.1.6/pcl-harness-market-0.1.6.pclplugin",
-    "notes":  "适配 PCL Harness 3.8.3：下载结果分类、启用权限拒绝提示，并为可回滚插件提供回滚按钮与签名状态。"
+    "publishedAt":  "2026-11-05T05:02:06Z",
+    "size":  34114,
+    "sha256":  "454b581890bede02056605414fdeadb91e39fbca8af7df4ee0a7aa9f4cd9553e",
+    "download":  "https://github.com/Badqf/PCL-Harness-Market/releases/download/v0.1.7/pcl-harness-market-0.1.7.pclplugin",
+    "notes":  "修正旧宿主把「宿主未提供签名状态」误报为「未签名」的问题；功能与 0.1.6 一致。"
 }

@@ -546,7 +546,10 @@ Namespace PCLHarness.Market
                 Dim Extra As New List(Of String)
                 If Not String.IsNullOrEmpty(Entry.License) Then Extra.Add("许可证 " & Entry.License)
                 If Latest.HasHash Then Extra.Add("SHA-256 " & MarketText.ShortHash(Latest.Sha256) & "…")
-                If Inst IsNot Nothing Then Extra.Add("签名 " & HostCompat.SignatureText(HostCompat.SignatureStatus(Inst)))
+                If Inst IsNot Nothing Then
+                    Dim Sig = HostCompat.SignatureStatus(Inst)
+                    If Sig >= 0 Then Extra.Add("签名 " & HostCompat.SignatureText(Sig))
+                End If
                 If Extra.Count > 0 Then
                     Dim ExtraText = MakeText(String.Join(" · ", Extra.ToArray()), 10.5, "ColorBrushGray3")
                     ExtraText.Margin = New Thickness(0, 8, 0, 0)
