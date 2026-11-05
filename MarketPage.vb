@@ -1,4 +1,4 @@
-﻿Imports System
+Imports System
 Imports System.Collections.Generic
 Imports System.Linq
 Imports System.Windows
@@ -14,7 +14,19 @@ Namespace PCLHarness.Market
         Inherits UserControl
 
         Private Const Space As String = "　·　"
-        Private Const CurrentApiVersion As Integer = 6
+
+        ''' <summary>宿主当前提供的插件 API 版本；旧宿主缺少字段时回退到 6。</summary>
+        Private Shared ReadOnly Property CurrentApiVersion As Integer
+            Get
+                Try
+                    Dim Field = GetType(PCL.ModPlugin).GetField("ApiVersionUi",
+                        Reflection.BindingFlags.Public Or Reflection.BindingFlags.Static)
+                    If Field IsNot Nothing Then Return Convert.ToInt32(Field.GetValue(Nothing))
+                Catch
+                End Try
+                Return 6
+            End Get
+        End Property
 
         Private ReadOnly Owner As MarketPlugin
         Private ReadOnly Root As StackPanel

@@ -1,10 +1,10 @@
 {
     "schema":  1,
-    "version":  "0.1.7",
+    "version":  "0.1.8",
     "minApiVersion":  6,
-    "publishedAt":  "2026-11-05T05:02:06Z",
-    "size":  34114,
-    "sha256":  "454b581890bede02056605414fdeadb91e39fbca8af7df4ee0a7aa9f4cd9553e",
-    "download":  "https://github.com/Badqf/PCL-Harness-Market/releases/download/v0.1.7/pcl-harness-market-0.1.7.pclplugin",
-    "notes":  "修正旧宿主把「宿主未提供签名状态」误报为「未签名」的问题；功能与 0.1.6 一致。"
+    "publishedAt":  "2026-11-05T12:00:00Z",
+    "size":  34240,
+    "sha256":  "6a0a6311a13d3d57c953716ce9dd0f58625f81c3849aef746035e17bf2a86eae",
+    "download":  "https://github.com/Badqf/PCL-Harness-Market/releases/download/v0.1.8/pcl-harness-market-0.1.8.pclplugin",
+    "notes":  "收录 AI 助手；修正 3.8.3 上 API v7 插件被误判不兼容的问题。"
 }
