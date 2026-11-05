@@ -1,4 +1,4 @@
-﻿Imports System
+Imports System
 Imports System.Collections.Generic
 Imports System.Linq
 Imports System.Windows
@@ -523,6 +523,7 @@ Namespace PCLHarness.Market
                                                               Message = "卸载失败：" & ex.Message
                                                           End Try
                                                           RunOnUi(Sub()
+                                                                      If Ok Then RefreshPluginPage()
                                                                       Host.Hint(Message, If(Ok, PCL.HintType.Green, PCL.HintType.Red))
                                                                       Done(Ok, Message)
                                                                       NotifyChanged()
@@ -595,15 +596,32 @@ Namespace PCLHarness.Market
                                                                          Catch ex As Exception
                                                                              Message = "操作失败：" & ex.Message
                                                                          End Try
-                                                                         RunOnUi(Sub()
-                                                                                     Host.Hint(Message, If(Ok, PCL.HintType.Green, PCL.HintType.Red))
-                                                                                     Done(Ok, Message)
-                                                                                     NotifyChanged()
-                                                                                 End Sub)
+                                                                          RunOnUi(Sub()
+                                                                                      If Ok Then RefreshPluginPage()
+                                                                                      Host.Hint(Message, If(Ok, PCL.HintType.Green, PCL.HintType.Red))
+                                                                                      Done(Ok, Message)
+                                                                                      NotifyChanged()
+                                                                                  End Sub)
                                                                      End Sub)
             Catch ex As Exception
                 Host.Hint("无法启动后台任务：" & ex.Message, PCL.HintType.Red)
                 Done(False, ex.Message)
+            End Try
+        End Sub
+
+        ''' <summary>让已打开的「插件」页重新读取启用状态，避免市场改状态后页面仍显示旧勾选。</summary>
+        Private Shared Sub RefreshPluginPage()
+            Try
+                Dim Field = GetType(PCL.ModMain).GetField("FrmPlugin",
+                    Reflection.BindingFlags.Public Or Reflection.BindingFlags.Static)
+                If Field Is Nothing Then Return
+                Dim Page = Field.GetValue(Nothing)
+                If Page Is Nothing Then Return
+                Dim Method = Page.GetType().GetMethod("RefreshAfterImport",
+                    Reflection.BindingFlags.Public Or Reflection.BindingFlags.Instance)
+                If Method IsNot Nothing Then Method.Invoke(Page, Nothing)
+            Catch
+                '旧宿主没有该页面或方法时忽略；市场自身状态仍会刷新。
             End Try
         End Sub
 

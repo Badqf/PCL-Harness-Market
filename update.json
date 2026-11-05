@@ -1,10 +1,10 @@
 {
     "schema":  1,
-    "version":  "0.1.8",
+    "version":  "0.1.9",
     "minApiVersion":  6,
-    "publishedAt":  "2026-11-05T12:00:00Z",
-    "size":  34240,
-    "sha256":  "6a0a6311a13d3d57c953716ce9dd0f58625f81c3849aef746035e17bf2a86eae",
-    "download":  "https://github.com/Badqf/PCL-Harness-Market/releases/download/v0.1.8/pcl-harness-market-0.1.8.pclplugin",
-    "notes":  "收录 AI 助手；修正 3.8.3 上 API v7 插件被误判不兼容的问题。"
+    "publishedAt":  "2026-11-05T13:00:00Z",
+    "size":  34378,
+    "sha256":  "ca6547ed6dadcbb743afe4c3ce75a45b0912da1671d904e069faf6376f556148",
+    "download":  "https://github.com/Badqf/PCL-Harness-Market/releases/download/v0.1.9/pcl-harness-market-0.1.9.pclplugin",
+    "notes":  "修复市场启用/禁用后「插件」页勾选不同步的问题。"
 }
