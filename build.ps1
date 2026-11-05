@@ -35,13 +35,7 @@ $ErrorActionPreference = "Stop"
 if (-not $Project) { $Project = $PSScriptRoot }
 
 function Find-Vbc {
-    $candidates = @(
-        $env:PCL_HARNESS_VBC,
-        (Join-Path $env:USERPROFILE "roslyn\tasks\vbc.exe"),
-        "C:\Users\$env:USERNAME\roslyn\tasks\vbc.exe",
-        "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\vbc.exe",
-        "$env:WINDIR\Microsoft.NET\Framework\v4.0.30319\vbc.exe"
-    )
+    $candidates = @($env:PCL_HARNESS_VBC)
     foreach ($base in @("C:\Program Files\Microsoft Visual Studio", "C:\Program Files (x86)\Microsoft Visual Studio")) {
         if (Test-Path $base) {
             $candidates += Get-ChildItem $base -Recurse -Filter vbc.exe -ErrorAction SilentlyContinue |
@@ -49,7 +43,33 @@ function Find-Vbc {
                 Select-Object -ExpandProperty FullName
         }
     }
-    return $candidates | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+    # 3.8.3 安全加固：用户目录可被普通程序写入，必须用 Authenticode 确认编译器确实来自微软。
+    $userVbc = Join-Path $env:USERPROFILE "roslyn\tasks\vbc.exe"
+    if (Test-Path $userVbc) {
+        $sig = $null
+        try { $sig = Get-AuthenticodeSignature -FilePath $userVbc -ErrorAction Stop } catch { $sig = $null }
+        $trusted = $false
+        if ($null -ne $sig -and $sig.Status -eq 'Valid' -and $null -ne $sig.SignerCertificate) {
+            $trusted = $sig.SignerCertificate.Subject -like '*Microsoft*'
+        }
+        if ($trusted) {
+            $candidates += $userVbc
+        } else {
+            Write-Warning "忽略 $userVbc：它没有有效的微软 Authenticode 签名，可能是被替换过的编译器。"
+        }
+    }
+    $candidates += @(
+        "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\vbc.exe",
+        "$env:WINDIR\Microsoft.NET\Framework\v4.0.30319\vbc.exe"
+    )
+    $found = $candidates | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+    if ($found -and $found -eq $userVbc) {
+        Write-Warning "正在使用用户目录里的编译器（$found）——该目录可被普通程序写入，请确认来源可信；推荐安装 Visual Studio Build Tools。"
+    }
+    if ($found -and $found -match '\\v4\.0\.30319\\vbc\.exe$') {
+        Write-Warning "找不到 Roslyn 编译器，退回 legacy vbc：它只支持 VB 10，插值字符串等新语法会编译失败。"
+    }
+    return $found
 }
 
 function Resolve-ReferenceDir {
@@ -98,8 +118,16 @@ if (-not $sources) { throw "目录里没有 .vb 源码：$projectDir" }
 $jsonPath = Join-Path $projectDir "plugin.json"
 if (-not (Test-Path $jsonPath)) { throw "缺少 plugin.json：$jsonPath" }
 $manifest = Get-Content $jsonPath -Raw -Encoding UTF8 | ConvertFrom-Json
-$dllName = if ($manifest.dll) { $manifest.dll } else { "Plugin.dll" }
+$dllName = if ($manifest.dll) { [string]$manifest.dll } else { "Plugin.dll" }
+# 3.8.3 安全加固：dll 只能是文件名，输出必须落在插件目录内。
+if ($dllName -match '[\\/]' -or $dllName.Contains('..') -or ($dllName -notmatch '^[A-Za-z0-9._\-]+\.dll$')) {
+    throw "plugin.json 的 dll 字段不合法（只能是文件名，例如 Market.dll）：$dllName"
+}
 $outDll = Join-Path $projectDir $dllName
+$projectFull = [System.IO.Path]::GetFullPath($projectDir).TrimEnd('\') + '\'
+if (-not [System.IO.Path]::GetFullPath($outDll).StartsWith($projectFull, [System.StringComparison]::OrdinalIgnoreCase)) {
+    throw "输出路径越界：$outDll"
+}
 
 $launcherExe = Find-Launcher
 if (-not $launcherExe -or -not (Test-Path $launcherExe)) {
@@ -142,8 +170,11 @@ Write-Host "输出       : $outDll"
 
 $effectiveRefs = $refs
 if ($isLegacyVbc) {
-    $effectiveRefs = $refs | Where-Object { $_ -ne "$ReferencePath\mscorlib.dll" }
-    $vbcArgs = @("/nologo", "/target:library", "/out:$outDll", "/optionstrict-", "/optionexplicit+", "/optioninfer+", "/codepage:65001", "/imports:Microsoft.VisualBasic,System,System.Collections.Generic,System.Linq,System.Text", "/r:$launcherExe")
+    # legacy vbc 会自动引用自己目录的 mscorlib / Microsoft.VisualBasic / System，再显式 /r: 会 BC2000。
+    $effectiveRefs = $refs | Where-Object {
+        $_ -notin @("$ReferencePath\mscorlib.dll", "$ReferencePath\Microsoft.VisualBasic.dll", "$ReferencePath\System.dll")
+    }
+    $vbcArgs = @("/noconfig", "/nologo", "/target:library", "/out:$outDll", "/optionstrict-", "/optionexplicit+", "/optioninfer+", "/codepage:65001", "/imports:Microsoft.VisualBasic,System,System.Collections.Generic,System.Linq,System.Text", "/r:$launcherExe")
 } else {
     $vbcArgs = @("/noconfig", "/nostdlib", "/nologo", "/target:library", "/out:$outDll", "/optionstrict-", "/optionexplicit+", "/optioninfer+", "/codepage:65001", "/imports:Microsoft.VisualBasic,System,System.Collections.Generic,System.Linq,System.Text", "/r:$launcherExe")
 }

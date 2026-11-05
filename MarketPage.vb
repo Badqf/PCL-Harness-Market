@@ -212,7 +212,7 @@ Namespace PCLHarness.Market
 
             Dim Left As New StackPanel()
             Dim Title As New TextBlock With {
-                .Text = If(Owner.NeedRestart, "更新已就绪，重启后生效", "插件市场 v" & Upd.Version & " 可用"),
+                .Text = If(Owner.NeedRestart, "更改已就绪，重启后生效", "插件市场 v" & Upd.Version & " 可用"),
                 .FontSize = 14.5,
                 .FontWeight = FontWeights.SemiBold
             }
@@ -221,7 +221,7 @@ Namespace PCLHarness.Market
 
             Dim Description As String
             If Owner.NeedRestart Then
-                Description = "下载与安装已完成。关闭并重新启动启动器后，新版本才会加载。"
+                Description = "操作已完成。关闭并重新启动启动器后才会生效。"
             ElseIf Not String.IsNullOrWhiteSpace(Upd.Notes) Then
                 Description = Upd.Notes
             Else
@@ -546,6 +546,7 @@ Namespace PCLHarness.Market
                 Dim Extra As New List(Of String)
                 If Not String.IsNullOrEmpty(Entry.License) Then Extra.Add("许可证 " & Entry.License)
                 If Latest.HasHash Then Extra.Add("SHA-256 " & MarketText.ShortHash(Latest.Sha256) & "…")
+                If Inst IsNot Nothing Then Extra.Add("签名 " & HostCompat.SignatureText(HostCompat.SignatureStatus(Inst)))
                 If Extra.Count > 0 Then
                     Dim ExtraText = MakeText(String.Join(" · ", Extra.ToArray()), 10.5, "ColorBrushGray3")
                     ExtraText.Margin = New Thickness(0, 8, 0, 0)
@@ -684,6 +685,16 @@ Namespace PCLHarness.Market
                             BeginUninstall(Entry, Inst)
                         End Sub
                     Actions.Children.Add(RemoveButton)
+
+                    If Owner.CanRollback(Entry.Id) Then
+                        Dim RollbackButton = MakeIconButton("↶", "回滚到上一版本")
+                        RollbackButton.IsEnabled = Not Busy
+                        AddHandler RollbackButton.Click,
+                            Sub(Sender As Object, E As MouseButtonEventArgs)
+                                BeginRollback(Entry, Inst)
+                            End Sub
+                        Actions.Children.Add(RollbackButton)
+                    End If
                 End If
             End If
 
@@ -722,6 +733,21 @@ Namespace PCLHarness.Market
                     RenderAll()
                 End Sub)
             RenderList()
+        End Sub
+
+        Private Sub BeginRollback(Entry As MarketPluginEntry, Inst As PCL.PluginSummary)
+            If Inst Is Nothing Then Return
+            Dim Prompt = "回滚「" & Entry.DisplayName & "」到上一版本？" & vbCrLf & vbCrLf &
+                         "启动器会换回最近一份备份；如果插件正在运行，会先排队，重启启动器后生效。"
+            If Owner.Host.Ask(Prompt, "回滚插件", "回滚", "取消") <> "回滚" Then Return
+
+            BusyIds.Add(Entry.Id)
+            RenderList()
+            Owner.RollbackAsync(Entry.Id, Entry.DisplayName,
+                Sub(Ok As Boolean, Message As String)
+                    BusyIds.Remove(Entry.Id)
+                    RenderAll()
+                End Sub)
         End Sub
 
         Private Sub BeginUninstall(Entry As MarketPluginEntry, Inst As PCL.PluginSummary)

@@ -1,10 +1,10 @@
 {
     "schema":  1,
-    "version":  "0.1.5",
+    "version":  "0.1.6",
     "minApiVersion":  6,
-    "publishedAt":  "2026-11-02T15:37:00Z",
-    "size":  32354,
-    "sha256":  "28371e5fb3d7aed42e298a23f659fe18d1e2f889d3819d9c2ad72272aa38364c",
-    "download":  "https://github.com/Badqf/PCL-Harness-Market/releases/download/v0.1.5/pcl-harness-market-0.1.5.pclplugin",
-    "notes":  "图标操作、悬浮按钮名称与更紧凑的列表卡片；功能与 0.1.4 一致。"
+    "publishedAt":  "2026-11-05T04:52:39Z",
+    "size":  34095,
+    "sha256":  "6da55dd77ae7380815fb493f1bf69a35374244a60e43619bc222d5df2b52c7c0",
+    "download":  "https://github.com/Badqf/PCL-Harness-Market/releases/download/v0.1.6/pcl-harness-market-0.1.6.pclplugin",
+    "notes":  "适配 PCL Harness 3.8.3：下载结果分类、启用权限拒绝提示，并为可回滚插件提供回滚按钮与签名状态。"
 }

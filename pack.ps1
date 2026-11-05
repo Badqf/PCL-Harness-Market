@@ -34,10 +34,18 @@ if ($manifest.id -notmatch '^[a-z0-9][a-z0-9_\-\.]{0,63}$') { throw "plugin.json
 if (-not $manifest.version -or $manifest.version -notmatch '^\d+(\.\d+){1,3}(-[0-9A-Za-z\.\-]+)?$') { throw "plugin.json 的 version 不合法：$($manifest.version)" }
 if (-not $manifest.dll) { throw "plugin.json 缺少 dll" }
 if (-not $manifest.entry) { throw "plugin.json 缺少 entry" }
+$dllName = [string]$manifest.dll
+if ($dllName -match '[\\/]' -or $dllName.Contains('..') -or ($dllName -notmatch '^[A-Za-z0-9._\-]+\.dll$')) {
+    throw "plugin.json 的 dll 字段不合法（只能是文件名）：$dllName"
+}
 
 $files = New-Object System.Collections.Generic.List[string]
 $files.Add($jsonPath)
-$dllPath = Join-Path $projectDir $manifest.dll
+$dllPath = Join-Path $projectDir $dllName
+$projectFull = [System.IO.Path]::GetFullPath($projectDir).TrimEnd('\') + '\'
+if (-not [System.IO.Path]::GetFullPath($dllPath).StartsWith($projectFull, [System.StringComparison]::OrdinalIgnoreCase)) {
+    throw "dll 路径越界：$dllPath"
+}
 if (-not (Test-Path $dllPath)) { throw "找不到 dll：$dllPath（先运行 build.ps1）" }
 $files.Add($dllPath)
 $licensePath = Join-Path $projectDir "LICENSE"

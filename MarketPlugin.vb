@@ -534,6 +534,43 @@ Namespace PCLHarness.Market
             End Try
         End Sub
 
+        Friend Function CanRollback(Id As String) As Boolean
+            Try
+                Return Client IsNot Nothing AndAlso Client.CanRollback(Id)
+            Catch
+                Return False
+            End Try
+        End Function
+
+        Friend Sub RollbackAsync(Id As String, DisplayName As String, Done As Action(Of Boolean, String))
+            Try
+                Host.Tasks.Run("回滚 " & DisplayName, Sub(Ctx)
+                                                         Dim Ok As Boolean = False
+                                                         Dim Message As String = ""
+                                                         Try
+                                                             Ctx.Report(0.3, "正在回滚 " & DisplayName & "…")
+                                                             Ok = Client.Rollback(Id)
+                                                             If Ok Then
+                                                                 MarkNeedRestart(False)
+                                                                 Message = DisplayName & " 已回滚到上一版本，重启启动器后生效。"
+                                                             Else
+                                                                 Message = "回滚失败：没有可用的备份，或备份替换失败。"
+                                                             End If
+                                                         Catch ex As Exception
+                                                             Message = "回滚失败：" & ex.Message
+                                                         End Try
+                                                         RunOnUi(Sub()
+                                                                     Host.Hint(Message, If(Ok, PCL.HintType.Green, PCL.HintType.Red))
+                                                                     Done(Ok, Message)
+                                                                     NotifyChanged()
+                                                                 End Sub)
+                                                     End Sub)
+            Catch ex As Exception
+                Host.Hint("无法启动回滚任务：" & ex.Message, PCL.HintType.Red)
+                Done(False, ex.Message)
+            End Try
+        End Sub
+
         Friend Sub SetEnabledAsync(Id As String, DisplayName As String, Value As Boolean, Done As Action(Of Boolean, String))
             Try
                 Host.Tasks.Run(If(Value, "启用 ", "禁用 ") & DisplayName, Sub(Ctx)
@@ -542,9 +579,19 @@ Namespace PCLHarness.Market
                                                                          Try
                                                                              Ctx.Report(0.3, "正在" & If(Value, "启用 ", "禁用 ") & DisplayName & "…")
                                                                              Ok = Client.SetEnabled(Id, Value)
-                                                                             Message = If(Ok,
-                                                                                 DisplayName & If(Value, " 已启用。", " 已禁用。"),
-                                                                                 If(Value, "启用失败：插件可能不存在。", "禁用失败：插件可能不存在。"))
+                                                                             If Ok Then
+                                                                                 Message = DisplayName & If(Value, " 已启用。", " 已禁用。")
+                                                                             ElseIf Value Then
+                                                                                 ' 3.8.x：声明了中/高风险权限但尚未信任的插件，宿主要求用户在插件页手动确认。
+                                                                                 Dim Found = Client.FindInstalled(Id)
+                                                                                 If Found IsNot Nothing Then
+                                                                                     Message = DisplayName & " 未能启用：宿主要求先确认它的权限。请到「插件」页手动启用并允许信任。"
+                                                                                 Else
+                                                                                     Message = "启用失败：插件可能不存在。"
+                                                                                 End If
+                                                                             Else
+                                                                                 Message = "禁用失败：插件可能不存在。"
+                                                                             End If
                                                                          Catch ex As Exception
                                                                              Message = "操作失败：" & ex.Message
                                                                          End Try

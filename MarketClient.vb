@@ -202,6 +202,14 @@ Namespace PCLHarness.Market
             Return Host.Plugins.SetEnabled(Id, Value)
         End Function
 
+        Public Function CanRollback(Id As String) As Boolean
+            Return HostCompat.CanRollback(Host, Id)
+        End Function
+
+        Public Function Rollback(Id As String) As Boolean
+            Return HostCompat.Rollback(Host, Id)
+        End Function
+
         Public Function ListInstalled() As List(Of PCL.PluginSummary)
             Try
                 Return Host.Plugins.List()
@@ -258,7 +266,10 @@ Namespace PCLHarness.Market
             Dim Failure As Exception = Nothing
             Dim Worker As New Thread(Sub()
                                          Try
-                                             If Not Host.HttpDownload(Url, Target) Then Failure = New MarketException("下载失败")
+                                             Dim Outcome = HostCompat.Download(Host, Url, Target)
+                                             If Not Outcome.Ok Then
+                                                 Failure = New MarketException(If(String.IsNullOrWhiteSpace(Outcome.Message), "下载失败", Outcome.Message))
+                                             End If
                                          Catch Ex As Exception
                                              Failure = Ex
                                          End Try
