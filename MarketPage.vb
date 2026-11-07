@@ -774,7 +774,7 @@ Namespace PCLHarness.Market
             End If
 
             Dim Prompt = "卸载「" & Entry.DisplayName & "」v" & Inst.Version & "？" & vbCrLf & vbCrLf &
-                         "插件目录会被移到 Plugins\.trash，data 目录与设置保留。"
+                         "插件目录会被移到系统回收站（旧版启动器为 Plugins\.trash），data 目录与设置保留。"
             If Owner.Host.Ask(Prompt, "卸载插件", "卸载", "取消") <> "卸载" Then Return
 
             BusyIds.Add(Entry.Id)

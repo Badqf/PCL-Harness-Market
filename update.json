@@ -1,10 +1,10 @@
 {
     "schema":  1,
-    "version":  "0.1.10",
+    "version":  "0.1.11",
     "minApiVersion":  6,
-    "publishedAt":  "2026-11-07T16:45:00Z",
-    "size":  34435,
-    "sha256":  "b829242a9e5d1d0bda9d4d1f041b4d63c31cf60c104789f1974fbe85bb73bfe6",
-    "download":  "https://github.com/Badqf/PCL-Harness-Market/releases/download/v0.1.10/pcl-harness-market-0.1.10.pclplugin",
-    "notes":  "修复市场安装插件后「插件」页列表不刷新、需重启才显示新插件的问题。"
+    "publishedAt":  "2026-11-08T02:00:00Z",
+    "size":  34459,
+    "sha256":  "420f92c47498881ccc38ce166b5772726049976dec9c4ed59dc933104f0c8c7d",
+    "download":  "https://github.com/Badqf/PCL-Harness-Market/releases/download/v0.1.11/pcl-harness-market-0.1.11.pclplugin",
+    "notes":  "卸载提示改为系统回收站（旧版启动器回退 Plugins\\.trash）。"
 }
