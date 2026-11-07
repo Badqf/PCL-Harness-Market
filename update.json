@@ -1,10 +1,10 @@
 {
     "schema":  1,
-    "version":  "0.1.9",
+    "version":  "0.1.10",
     "minApiVersion":  6,
-    "publishedAt":  "2026-11-05T13:00:00Z",
-    "size":  34378,
-    "sha256":  "ca6547ed6dadcbb743afe4c3ce75a45b0912da1671d904e069faf6376f556148",
-    "download":  "https://github.com/Badqf/PCL-Harness-Market/releases/download/v0.1.9/pcl-harness-market-0.1.9.pclplugin",
-    "notes":  "修复市场启用/禁用后「插件」页勾选不同步的问题。"
+    "publishedAt":  "2026-11-07T16:45:00Z",
+    "size":  34435,
+    "sha256":  "b829242a9e5d1d0bda9d4d1f041b4d63c31cf60c104789f1974fbe85bb73bfe6",
+    "download":  "https://github.com/Badqf/PCL-Harness-Market/releases/download/v0.1.10/pcl-harness-market-0.1.10.pclplugin",
+    "notes":  "修复市场安装插件后「插件」页列表不刷新、需重启才显示新插件的问题。"
 }
