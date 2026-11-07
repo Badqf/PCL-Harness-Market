@@ -1,0 +1,21 @@
+{
+  "id": "link-page",
+  "name": "联机页面",
+  "summary": "恢复启动器顶部的「联机」页面：房间码 P2P 直连，支持虚拟局域网（TUN）模式。",
+  "description": "PCL Harness 3.9.0 起，本体不再内置「联机」功能，改为由插件提供。\n\n安装并启用本插件后，顶栏会出现「联机」标签，页面内容由启动器内核渲染（创建房间、加入房间、TUN 模式、联机诊断都在原处），插件只负责把入口挂回去，不接管页面内部逻辑，也不访问网络或读写文件。\n\n- 需要 PCL Harness 3.9.0 及以上（API v8）\n- 仅申请 ui 权限\n- 禁用或卸载插件后，标签页立即消失；联机设置（含已授权主机）仍保留在启动器里",
+  "author": "Badqf",
+  "homepage": "https://github.com/Badqf/PCL-Harness",
+  "license": "PCL 分发有限许可",
+  "tags": ["官方", "联机", "核心功能"],
+  "featured": true,
+  "latest": {
+    "version": "1.0.0",
+    "minApiVersion": 8,
+    "package": "../packages/link-page-1.0.0.pclplugin",
+    "size": 3783,
+    "sha256": "704238817ed3fed5ab98baffa0503b2e09c4572c7e0a36a80b29afd3270c0da2",
+    "download": "https://raw.githubusercontent.com/Badqf/PCL-Harness-Market/main/index/packages/link-page-1.0.0.pclplugin",
+    "publishedAt": "2026-11-07T21:40:00Z",
+    "notes": "首次上架。需要 PCL Harness 3.9.0 及以上。"
+  }
+}
