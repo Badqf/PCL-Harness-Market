@@ -9,13 +9,13 @@
   "tags": ["官方", "下载", "核心功能"],
   "featured": true,
   "latest": {
-    "version": "1.0.0",
+    "version": "1.0.1",
     "minApiVersion": 8,
-    "package": "../packages/download-page-1.0.0.pclplugin",
-    "size": 3794,
-    "sha256": "89421cda88b86cdb6115930e6be7455ed5ea5c546b0efd1f4eefdab27823c079",
-    "download": "https://raw.githubusercontent.com/Badqf/PCL-Harness-Market/main/index/packages/download-page-1.0.0.pclplugin",
-    "publishedAt": "2026-11-07T21:40:00Z",
-    "notes": "首次上架。需要 PCL Harness 3.9.0 及以上。"
+    "package": "../packages/download-page-1.0.1.pclplugin",
+    "size": 3845,
+    "sha256": "c86bdd6e0891600bc40ec6147e03c7df7f6600d9d030794d56e9ee065502dd71",
+    "download": "https://raw.githubusercontent.com/Badqf/PCL-Harness-Market/main/index/packages/download-page-1.0.1.pclplugin",
+    "publishedAt": "2026-11-08T01:30:00Z",
+    "notes": "描述与插件市场条目对齐（包内 plugin.json 同步更新）。仍需要 PCL Harness 3.9.0 及以上。"
   }
 }
