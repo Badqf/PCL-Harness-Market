@@ -1,10 +1,10 @@
 {
     "schema":  1,
-    "version":  "0.1.11",
+    "version":  "0.1.12",
     "minApiVersion":  6,
-    "publishedAt":  "2026-11-08T02:00:00Z",
-    "size":  34459,
-    "sha256":  "420f92c47498881ccc38ce166b5772726049976dec9c4ed59dc933104f0c8c7d",
-    "download":  "https://github.com/Badqf/PCL-Harness-Market/releases/download/v0.1.11/pcl-harness-market-0.1.11.pclplugin",
-    "notes":  "卸载提示改为系统回收站（旧版启动器回退 Plugins\\.trash）。"
+    "publishedAt":  "2026-11-14T18:05:00Z",
+    "size":  34462,
+    "sha256":  "3232208c26266a0815f9042f5e2a693ac9b60210b9326bd003bcce502cb92c9a",
+    "download":  "https://github.com/Badqf/PCL-Harness-Market/releases/download/v0.1.12/pcl-harness-market-0.1.12.pclplugin",
+    "notes":  "同步 PCL Harness 3.9.5（API v8）重新编译验证；兼容范围不变。"
 }
