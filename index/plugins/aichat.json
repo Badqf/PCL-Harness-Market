@@ -1,4 +1,4 @@
-﻿{
+{
     "id":  "aichat",
     "name":  "AI 助手",
     "summary":  "在「启动」页与 AI 聊天，可调用工具管理实例、插件和模组。",
@@ -11,7 +11,7 @@
                  "聊天",
                  "工具"
              ],
-    "featured":  true,
+    "featured":  false,
     "latest":  {
                    "version":  "0.1.0",
                    "minApiVersion":  7,
