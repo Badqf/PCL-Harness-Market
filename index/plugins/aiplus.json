@@ -2,19 +2,19 @@
   "id": "aiplus",
   "name": "AI 助手 Pro",
   "summary": "启动页 AI 对话卡片：多会话、流式输出，能安装游戏、加载器与 Modrinth/CurseForge 内容。",
-  "description": "在「启动」页右侧卡片与 AI 对话，并把对话变成对启动器的实际操作：安装游戏版本与加载器、下载模组和整合包、启动游戏。\n\n0.5.1 是首个公开版本，支持多会话、按会话保留草稿、流式输出与上下文用量，单次提问最多 12 轮工具往返。\n\n- 需要 PCL Harness 3.10.x 及以上（API v10）\n- 仅支持 Windows（WPF + DPAPI）\n- 启用时会请求 instance.write、modpack.install 等权限确认\n- 插件作者：异天庄主；许可证 GPL-3.0",
+  "description": "在「启动」页右侧卡片与 AI 对话，并把对话变成对启动器的实际操作：安装游戏版本与加载器、下载模组和整合包、启动游戏。\n\n0.5.6 是最新公开版本，支持多会话、按会话保留草稿、流式输出与上下文用量，单次提问最多 12 轮工具往返；新增 MC百科搜索与「先装游戏、再装内容」的安装闸门。\n\n- 需要 PCL Harness 3.10.x 及以上（API v10）\n- 仅支持 Windows（WPF + DPAPI）\n- 启用时会请求 instance.write、modpack.install 等权限确认\n- 插件作者：异天庄主；许可证 GPL-3.0",
   "author": "异天庄主",
   "homepage": "https://github.com/yitianzhuangzhu/PCLH-Ai-chatPlus-Plugin",
   "license": "GPL-3.0",
   "tags": ["AI", "聊天", "安装", "工具"],
   "featured": false,
   "latest": {
-    "version": "0.5.1",
+    "version": "0.5.6",
     "minApiVersion": 10,
-    "publishedAt": "2026-11-26T05:52:52Z",
-    "size": 68124,
-    "sha256": "90c247c5be365a773e1b3cf0d22636b53a48c3b66c5aba348a5df7d79e5ae68f",
-    "download": "https://github.com/yitianzhuangzhu/PCLH-Ai-chatPlus-Plugin/releases/download/v0.5.1/aiplus-0.5.1.pclplugin",
-    "notes": "首个公开版本；需要 PCL Harness 3.10.x+（API v10），支持多会话、流式输出与真实安装/下载。"
+    "publishedAt": "2026-11-26T12:22:27Z",
+    "size": 86804,
+    "sha256": "bad7e0508436b3789a62af855af10b5fc2ba3836a35de5d485a2eb42c1f09df2",
+    "download": "https://github.com/yitianzhuangzhu/PCLH-Ai-chatPlus-Plugin/releases/download/v0.5.6/aiplus-0.5.6.pclplugin",
+    "notes": "新增 MC百科搜索、安装/下载两步闸门与 36 个工具；需要 PCL Harness 3.10.x+（API v10）。"
   }
 }
