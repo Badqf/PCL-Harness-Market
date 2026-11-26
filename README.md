@@ -112,6 +112,25 @@ powershell -ExecutionPolicy Bypass -File .\tools\dev-server.ps1
 2. 在市场仓库新增 `index/plugins/<id>.json`，填写 `latest`。
 3. 运行 `tools\make-index.ps1` 生成根 `index.json`，提交 PR。
 
+### 自动同步 GitHub Release
+
+GitHub Release 来源的条目可以交给
+[`.github/workflows/sync-index.yml`](.github/workflows/sync-index.yml) 自动同步：
+工作流每 30 分钟运行一次，也可在 Actions 页手动触发。它在源条目里读取：
+
+```json
+"source": {
+  "type": "github",
+  "repo": "Badqf/PCLH-Ai-chat-Plugin",
+  "asset": "aichat-*.pclplugin"
+}
+```
+
+只更新 `latest` 的版本、发布时间、大小、SHA-256 与下载地址；`featured`、摘要、
+描述、标签和 `notes` 保持人工维护。用 `latest.package` 的本地包条目应加
+`"sync": false`，不会被自动覆盖。同步后脚本会重新生成 `index.json`，只有确实
+变化时才提交。
+
 ## 下载量
 
 发现页暂不显示下载量：当前插件包走仓库直链，GitHub 不提供按文件的下载计数，不能凭空伪造数字。完整方案（一期把包挂到 GitHub Release，由 Action 每天把 `download_count` 烘焙进 `index.json`；二期用 Cloudflare Worker 做趋势）见

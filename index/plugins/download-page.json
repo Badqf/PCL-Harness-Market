@@ -8,6 +8,7 @@
   "license": "PCL 分发有限许可",
   "tags": ["官方", "下载", "核心功能"],
   "featured": true,
+  "sync": false,
   "latest": {
     "version": "1.0.1",
     "minApiVersion": 8,

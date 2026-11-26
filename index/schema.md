@@ -79,6 +79,23 @@ https://raw.githubusercontent.com/Badqf/PCL-Harness-Market/main/index.json
 | `download` | string | 是 | 安装包的 http(s) 绝对地址。推荐使用 GitHub Release 的稳定下载地址。 |
 | `notes` | string | 否 | 本版本更新说明，展示在详情里。 |
 
+### 自动同步元数据（仅源条目）
+
+以下字段只用于 `index/plugins/<id>.json`，由 `tools/sync-index.ps1` 读取；
+`tools/make-index.ps1` 生成根 `index.json` 时会移除它们。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `source` | object | GitHub Release 同步源；存在时启用自动同步。 |
+| `source.type` | string | 目前只支持 `github`。 |
+| `source.repo` | string | `owner/repo`，例如 `Badqf/PCLH-Ai-chat-Plugin`。 |
+| `source.asset` | string | Release 资产文件名通配符，例如 `aichat-*.pclplugin`；只匹配一个。 |
+| `sync` | boolean | 设为 `false` 时跳过自动同步，适合本地包或需要人工审核的条目。 |
+
+同步脚本只更新 `latest.version`、`latest.publishedAt`、`latest.size`、
+`latest.sha256` 和 `latest.download`，不会改动 `featured`、摘要、描述、标签或
+`latest.notes`。找不到匹配资产、摘要下载失败或版本没有变新时保持原条目不变。
+
 ### `downloads`（可选）
 
 由维护脚本根据 GitHub Release 资产的 `download_count` 汇总而来，客户端只读显示：

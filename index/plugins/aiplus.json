@@ -8,6 +8,11 @@
   "license": "GPL-3.0",
   "tags": ["AI", "聊天", "安装", "工具"],
   "featured": false,
+  "source": {
+    "type": "github",
+    "repo": "yitianzhuangzhu/PCLH-Ai-chatPlus-Plugin",
+    "asset": "aiplus-*.pclplugin"
+  },
   "latest": {
     "version": "0.5.6",
     "minApiVersion": 10,

@@ -1,0 +1,42 @@
+name: sync-market-index
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-market-index
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Sync GitHub release metadata
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./tools/sync-index.ps1
+
+      - name: Rebuild and commit index
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- index/plugins; then
+            echo "No source entry changes."
+            exit 0
+          fi
+          pwsh -NoProfile -File ./tools/make-index.ps1
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.json index/plugins
+          git commit -m "chore: sync plugin release metadata"
+          git push
