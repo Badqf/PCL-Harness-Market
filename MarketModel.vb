@@ -1,4 +1,4 @@
-﻿Imports System
+Imports System
 Imports System.Collections.Generic
 Imports System.Globalization
 Imports System.Text
@@ -168,6 +168,8 @@ Namespace PCLHarness.Market
     Friend Class MarketRelease
         Public Property Version As String = ""
         Public Property MinApiVersion As Integer = 6
+        Public Property MinLauncher As String = ""
+        Public Property MaxLauncher As String = ""
         Public Property PublishedAt As String = ""
         Public Property Size As Long
         Public Property Sha256 As String = ""
@@ -192,6 +194,8 @@ Namespace PCLHarness.Market
             Release.Version = MarketJson.AsString(Dict, "version").Trim()
             If String.IsNullOrEmpty(Release.Version) Then Return Nothing
             Release.MinApiVersion = MarketJson.AsInt(Dict, "minApiVersion", 6)
+            Release.MinLauncher = MarketJson.AsString(Dict, "minLauncher").Trim()
+            Release.MaxLauncher = MarketJson.AsString(Dict, "maxLauncher").Trim()
             Release.PublishedAt = MarketJson.AsString(Dict, "publishedAt").Trim()
             Release.Size = MarketJson.AsLong(Dict, "size", 0)
             Release.Sha256 = MarketJson.AsString(Dict, "sha256").Trim().ToLowerInvariant()
@@ -262,6 +266,20 @@ Namespace PCLHarness.Market
             If A.PreRelease.Length = 0 Then Return 1
             If B.PreRelease.Length = 0 Then Return -1
             Return String.CompareOrdinal(A.PreRelease, B.PreRelease)
+        End Function
+
+        Friend Function IsVersion(Value As String) As Boolean
+            If String.IsNullOrWhiteSpace(Value) Then Return False
+            Return VersionPattern.IsMatch(Value.Trim())
+        End Function
+
+        Friend Function FormatLauncherRange(MinValue As String, MaxValue As String) As String
+            Dim HasMin = IsVersion(MinValue)
+            Dim HasMax = IsVersion(MaxValue)
+            If HasMin AndAlso HasMax Then Return MinValue.Trim() & "–" & MaxValue.Trim()
+            If HasMin Then Return MinValue.Trim() & " 及以上"
+            If HasMax Then Return MaxValue.Trim() & " 及以下"
+            Return ""
         End Function
 
         Private Class VersionParts

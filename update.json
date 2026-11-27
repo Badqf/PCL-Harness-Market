@@ -1,10 +1,10 @@
 {
     "schema":  1,
-    "version":  "0.1.14",
+    "version":  "0.1.15",
     "minApiVersion":  6,
-    "publishedAt":  "2026-11-27T17:26:00Z",
-    "size":  34672,
-    "sha256":  "b1f39cbb90eca2653246ffb106200542b673b3c1dc2e9ad5a7b78d799ed01320",
-    "download":  "https://github.com/Badqf/PCL-Harness-Market/releases/download/v0.1.14/pcl-harness-market-0.1.14.pclplugin",
-    "notes":  "索引缓存降到 3 分钟并绕过 CDN 缓存；索引先官方 raw、失败自动回退镜像；Action 每 10 分钟同步。"
+    "publishedAt":  "2026-11-28T01:40:00Z",
+    "size":  35276,
+    "sha256":  "672989aed86e4f15c089bcf392177a76e5d928005a4a27a007abdc2a2bd5266c",
+    "download":  "https://github.com/Badqf/PCL-Harness-Market/releases/download/v0.1.15/pcl-harness-market-0.1.15.pclplugin",
+    "notes":  "索引新增插件支持的启动器版本范围；不兼容的插件会变暗并禁用安装/更新。"
 }

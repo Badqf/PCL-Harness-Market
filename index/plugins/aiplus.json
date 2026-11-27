@@ -21,6 +21,7 @@
   "latest": {
     "version": "0.5.7",
     "minApiVersion": 10,
+    "minLauncher": "3.10.7",
     "publishedAt": "2026-11-27T01:03:22Z",
     "size": 86284,
     "sha256": "a699a41cc9fc0eaf1a7a2dd5fe670f3ef2a1de52ac51e7d27e7b04db805dfef4",

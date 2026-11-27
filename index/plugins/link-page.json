@@ -12,6 +12,7 @@
   "latest": {
     "version": "1.0.1",
     "minApiVersion": 8,
+    "minLauncher": "3.9.0",
     "package": "../packages/link-page-1.0.1.pclplugin",
     "size": 3841,
     "sha256": "dc7058b523a28dd42772ddb15f7e9f215bdd7674301922ac7283b82c009e5843",

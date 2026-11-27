@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [string]$Root,
     [string]$Token = $env:GITHUB_TOKEN,

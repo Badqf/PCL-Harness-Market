@@ -128,6 +128,26 @@ foreach ($file in $files) {
         [void]$errors.Add("${label}：latest.minApiVersion 必须是正整数")
     }
 
+    $minLauncher = ([string](As-Property $latest 'minLauncher')).Trim()
+    $maxLauncher = ([string](As-Property $latest 'maxLauncher')).Trim()
+    $launcherPattern = '^\d+(\.\d+){1,3}$'
+    if ($minLauncher -and $minLauncher -cnotmatch $launcherPattern) {
+        [void]$errors.Add("${label}：latest.minLauncher「$minLauncher」不合法")
+    }
+    if ($maxLauncher -and $maxLauncher -cnotmatch $launcherPattern) {
+        [void]$errors.Add("${label}：latest.maxLauncher「$maxLauncher」不合法")
+    }
+    if ($minLauncher -and $maxLauncher) {
+        try {
+            if ([version]$minLauncher -gt [version]$maxLauncher) {
+                [void]$errors.Add("${label}：latest.minLauncher 不能高于 maxLauncher")
+            }
+        }
+        catch {
+            [void]$errors.Add("${label}：启动器版本范围无法比较")
+        }
+    }
+
     $download = [string](As-Property $latest 'download')
     $downloadOk = $false
     if (-not [string]::IsNullOrWhiteSpace($download)) {
@@ -173,6 +193,18 @@ foreach ($file in $files) {
         $publishedAt = $file.LastWriteTimeUtc.ToString('yyyy-MM-ddTHH:mm:ssZ')
     }
 
+    $latestOut = [ordered]@{
+        version       = $version
+        minApiVersion = $minApiValue
+        publishedAt   = $publishedAt
+        size          = $size
+        sha256        = $sha
+        download      = $download
+        notes         = [string](As-Property $latest 'notes')
+    }
+    if ($minLauncher) { $latestOut.minLauncher = $minLauncher }
+    if ($maxLauncher) { $latestOut.maxLauncher = $maxLauncher }
+
     $entry = [ordered]@{
         id          = $id
         name        = $name
@@ -183,15 +215,7 @@ foreach ($file in $files) {
         license     = [string](As-Property $obj 'license')
         tags        = @((As-Property $obj 'tags') | Where-Object { $_ } | ForEach-Object { [string]$_ })
         featured    = [bool](As-Property $obj 'featured')
-        latest      = [ordered]@{
-            version      = $version
-            minApiVersion = $minApiValue
-            publishedAt  = $publishedAt
-            size         = $size
-            sha256       = $sha
-            download     = $download
-            notes        = [string](As-Property $latest 'notes')
-        }
+        latest      = $latestOut
     }
     $dl = $downloadsMap[$id]
     if ($null -ne $dl) {

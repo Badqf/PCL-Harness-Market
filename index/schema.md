@@ -45,6 +45,8 @@ https://raw.githubusercontent.com/Badqf/PCL-Harness-Market/main/index.json
   "latest": {
     "version": "1.2.0",
     "minApiVersion": 6,
+    "minLauncher": "3.8.3",
+    "maxLauncher": "3.10.7",
     "publishedAt": "2026-11-02T00:00:00Z",
     "size": 12345,
     "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
@@ -73,6 +75,8 @@ https://raw.githubusercontent.com/Badqf/PCL-Harness-Market/main/index.json
 | --- | --- | --- | --- |
 | `version` | string | 是 | 点分版本号，可带预发布后缀，如 `1.2.0`、`1.2.0-beta.1`。 |
 | `minApiVersion` | integer | 是 | 插件要求的最低 Host API 版本，必须与包内 `plugin.json` 一致。 |
+| `minLauncher` | string | 否 | 支持的最低启动器版本，例如 `3.8.3`；只在市场展示与兼容性判断中使用。 |
+| `maxLauncher` | string | 否 | 支持的最高启动器版本；不填表示没有上限。 |
 | `publishedAt` | string | 否 | 发布时间，ISO 8601；缺省时生成脚本使用条目文件的修改时间。 |
 | `size` | integer | 是 | 安装包字节数，必须与实际文件一致。 |
 | `sha256` | string | 是 | 安装包的 SHA-256（64 位小写十六进制）。客户端**不会安装没有摘要的包**。 |
@@ -135,3 +139,4 @@ powershell -ExecutionPolicy Bypass -File tools\make-index.ps1 -Check
 - 条目缺少 `sha256`、`download` 或版本号非法时，该条目仍会显示，但安装按钮会被禁用并说明原因。
 - 摘要只保证「下载到的字节与索引声明一致」，**不提供签名或作者身份验证**。启用插件等于运行它的代码，请只启用信任来源。
 - `minApiVersion` 高于当前启动器 API 版本时，客户端会拒绝安装并提示升级启动器。
+- `minLauncher` / `maxLauncher` 只描述启动器版本范围（如 `3.8.3`、`3.10.7`），不替代 `minApiVersion`；范围不匹配时卡片会变暗、显示提示并禁用安装/更新。

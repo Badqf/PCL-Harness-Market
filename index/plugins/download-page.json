@@ -12,6 +12,7 @@
   "latest": {
     "version": "1.0.1",
     "minApiVersion": 8,
+    "minLauncher": "3.9.0",
     "package": "../packages/download-page-1.0.1.pclplugin",
     "size": 3845,
     "sha256": "c86bdd6e0891600bc40ec6147e03c7df7f6600d9d030794d56e9ee065502dd71",

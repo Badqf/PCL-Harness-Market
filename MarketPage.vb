@@ -28,6 +28,22 @@ Namespace PCLHarness.Market
             End Get
         End Property
 
+        ''' <summary>启动器版本；通过反射读取，避免 Const 在当前构建期被内联。</summary>
+        Private Shared ReadOnly Property LauncherVersion As String
+            Get
+                Try
+                    Dim Field = GetType(PCL.ModBase).GetField("VersionBaseName",
+                        Reflection.BindingFlags.Public Or Reflection.BindingFlags.Static)
+                    If Field IsNot Nothing Then
+                        Dim Value = Convert.ToString(Field.GetValue(Nothing))
+                        If Not String.IsNullOrWhiteSpace(Value) Then Return Value.Trim()
+                    End If
+                Catch
+                End Try
+                Return ""
+            End Get
+        End Property
+
         Private ReadOnly Owner As MarketPlugin
         Private ReadOnly Root As StackPanel
         Private ReadOnly ListPanel As StackPanel
@@ -493,8 +509,21 @@ Namespace PCLHarness.Market
             Dim SelfId = If(Owner.Host Is Nothing OrElse Owner.Host.Info Is Nothing, "", Owner.Host.Info.Id)
             Dim IsSelf = String.Equals(Entry.Id, SelfId, StringComparison.OrdinalIgnoreCase)
             Dim Busy = BusyIds.Contains(Entry.Id)
+            Dim HostVersion = LauncherVersion
+            Dim LauncherRange = MarketText.FormatLauncherRange(Latest.MinLauncher, Latest.MaxLauncher)
+            Dim HostCompatible As Boolean = True
+            If LauncherRange <> "" Then
+                If MarketText.IsVersion(Latest.MinLauncher) AndAlso MarketText.IsVersion(HostVersion) AndAlso
+                   MarketText.CompareVersion(HostVersion, Latest.MinLauncher) < 0 Then
+                    HostCompatible = False
+                End If
+                If MarketText.IsVersion(Latest.MaxLauncher) AndAlso MarketText.IsVersion(HostVersion) AndAlso
+                   MarketText.CompareVersion(HostVersion, Latest.MaxLauncher) > 0 Then
+                    HostCompatible = False
+                End If
+            End If
             Dim Compatible = Latest.MinApiVersion <= CurrentApiVersion
-            Dim Installable = Compatible AndAlso Latest.HasHash AndAlso Latest.HasDownload
+            Dim Installable = Compatible AndAlso HostCompatible AndAlso Latest.HasHash AndAlso Latest.HasDownload
 
             Dim Card As New MyCard With {.Margin = New Thickness(0, 0, 0, 6)}
             Dim GridMain As New Grid With {.Margin = New Thickness(18, 10, 18, 10)}
@@ -534,6 +563,7 @@ Namespace PCLHarness.Market
             If Entry.HasDownloads Then Meta.Add("下载 " & Entry.Downloads.Value.ToString("N0", Globalization.CultureInfo.InvariantCulture))
             If Not Compatible Then Meta.Add("需要 API v" & Latest.MinApiVersion.ToString())
             If Entry.Tags IsNot Nothing AndAlso Entry.Tags.Count > 0 Then Meta.Add("#" & String.Join(" #", Entry.Tags.ToArray()))
+            If LauncherRange <> "" Then Meta.Add("适配 " & LauncherRange)
             If Meta.Count > 0 Then
                 Dim MetaText = MakeText(String.Join(" · ", Meta.ToArray()), 11, "ColorBrushGray2")
                 MetaText.Margin = New Thickness(0, 3, 0, 0)
@@ -546,6 +576,14 @@ Namespace PCLHarness.Market
                 SummaryText.Margin = New Thickness(0, 5, 0, 0)
                 SummaryText.MaxWidth = 720
                 Left.Children.Add(SummaryText)
+            End If
+
+            If Not HostCompatible Then
+                Dim Notice = MakeText("当前启动器 v" & HostVersion & " 不在适配范围（" & LauncherRange & "）", 11, "ColorBrushRedLight")
+                Notice.Margin = New Thickness(0, 6, 0, 0)
+                Notice.MaxWidth = 720
+                Left.Children.Add(Notice)
+                Card.Opacity = 0.6
             End If
 
             If _expandedId = Entry.Id Then
@@ -606,6 +644,8 @@ Namespace PCLHarness.Market
             ElseIf Inst Is Nothing Then
                 If Not Compatible Then
                     StateLabel = "需要 API v" & Latest.MinApiVersion.ToString()
+                ElseIf Not HostCompatible Then
+                    StateLabel = "不兼容当前启动器"
                 ElseIf Not Latest.HasHash Then
                     StateLabel = "索引缺少 SHA-256"
                 ElseIf Not Latest.HasDownload Then
@@ -616,7 +656,9 @@ Namespace PCLHarness.Market
             Else
                 Compare = MarketText.CompareVersion(Inst.Version, Latest.Version)
                 StateLabel = "已安装 v" & Inst.Version & If(Inst.Enabled, " · 已启用", " · 未启用")
-                If Compare < 0 Then
+                If Not HostCompatible Then
+                    StateLabel &= " · 不兼容当前启动器"
+                ElseIf Compare < 0 Then
                     StateLabel &= " · 可更新"
                 ElseIf Compare > 0 Then
                     StateLabel &= " · 本地较新"
@@ -669,7 +711,7 @@ Namespace PCLHarness.Market
                             End Sub
                         Actions.Children.Add(InstallButton)
                     Else
-                        Dim Blocked = MakeIconButton("↓", "当前不可安装", False, False)
+                        Dim Blocked = MakeIconButton("↓", If(HostCompatible, "当前不可安装", "当前启动器不兼容"), False, False)
                         Blocked.IsEnabled = False
                         Actions.Children.Add(Blocked)
                     End If
@@ -684,7 +726,7 @@ Namespace PCLHarness.Market
                                 End Sub
                             Actions.Children.Add(UpdateButton)
                         Else
-                            Dim Blocked = MakeIconButton("↑", "新版本不可安装", False, False)
+                            Dim Blocked = MakeIconButton("↑", If(HostCompatible, "新版本不可安装", "当前启动器不兼容"), False, False)
                             Blocked.IsEnabled = False
                             Actions.Children.Add(Blocked)
                         End If
