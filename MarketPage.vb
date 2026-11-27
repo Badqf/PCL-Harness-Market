@@ -391,6 +391,7 @@ Namespace PCLHarness.Market
             Dim DiscoverCount = MarketEntries.Count
             Dim EnabledCount = MarketEntries.Where(Function(E) Map.ContainsKey(E.Id) AndAlso Map(E.Id).Enabled).Count()
             Dim DisabledCount = MarketEntries.Where(Function(E) Map.ContainsKey(E.Id) AndAlso Not Map(E.Id).Enabled).Count()
+            Dim UpdatableCount = MarketEntries.Where(Function(E) E.Latest IsNot Nothing AndAlso Map.ContainsKey(E.Id) AndAlso MarketText.CompareVersion(Map(E.Id).Version, E.Latest.Version) < 0).Count()
             Dim FavoriteCount = MarketEntries.Where(Function(E) Owner.IsFavorite(E.Id)).Count()
 
             TabsPanel.Children.Clear()
@@ -398,6 +399,7 @@ Namespace PCLHarness.Market
             TabsPanel.Children.Add(MakeTab("收藏", FavoriteCount, "favorites"))
             TabsPanel.Children.Add(MakeTab("已安装", EnabledCount, "installed"))
             TabsPanel.Children.Add(MakeTab("已禁用", DisabledCount, "disabled"))
+            TabsPanel.Children.Add(MakeTab("可更新", UpdatableCount, "updatable"))
         End Sub
 
         Private Function MakeTab(Text As String, Count As Integer, Key As String) As MyButton
@@ -443,6 +445,8 @@ Namespace PCLHarness.Market
                     Shown = Shown.Where(Function(E) InstalledMap.ContainsKey(E.Id) AndAlso InstalledMap(E.Id).Enabled).ToList()
                 Case "disabled"
                     Shown = Shown.Where(Function(E) InstalledMap.ContainsKey(E.Id) AndAlso Not InstalledMap(E.Id).Enabled).ToList()
+                Case "updatable"
+                    Shown = Shown.Where(Function(E) InstalledMap.ContainsKey(E.Id) AndAlso MarketText.CompareVersion(InstalledMap(E.Id).Version, E.Latest.Version) < 0).ToList()
             End Select
 
             Shown.Sort(
@@ -464,6 +468,8 @@ Namespace PCLHarness.Market
                     Empty = "市场里的插件还没有已启用的。"
                 ElseIf _tab = "disabled" Then
                     Empty = "市场里的插件没有已禁用的。"
+                ElseIf _tab = "updatable" Then
+                    Empty = "市场里的插件都是最新版本。"
                 ElseIf Not String.IsNullOrEmpty(_keyword) Then
                     Empty = "没有匹配的插件。换个关键词试试。"
                 Else
