@@ -6,7 +6,12 @@
   "author": "异天庄主",
   "homepage": "https://github.com/yitianzhuangzhu/PCLH-Ai-chatPlus-Plugin",
   "license": "GPL-3.0",
-  "tags": ["AI", "聊天", "安装", "工具"],
+  "tags": [
+    "AI",
+    "聊天",
+    "安装",
+    "工具"
+  ],
   "featured": false,
   "source": {
     "type": "github",
@@ -14,12 +19,12 @@
     "asset": "aiplus-*.pclplugin"
   },
   "latest": {
-    "version": "0.5.6",
+    "version": "0.5.7",
     "minApiVersion": 10,
-    "publishedAt": "2026-11-26T12:22:27Z",
-    "size": 86804,
-    "sha256": "bad7e0508436b3789a62af855af10b5fc2ba3836a35de5d485a2eb42c1f09df2",
-    "download": "https://github.com/yitianzhuangzhu/PCLH-Ai-chatPlus-Plugin/releases/download/v0.5.6/aiplus-0.5.6.pclplugin",
+    "publishedAt": "2026-11-27T01:03:22Z",
+    "size": 86284,
+    "sha256": "a699a41cc9fc0eaf1a7a2dd5fe670f3ef2a1de52ac51e7d27e7b04db805dfef4",
+    "download": "https://github.com/yitianzhuangzhu/PCLH-Ai-chatPlus-Plugin/releases/download/v0.5.7/aiplus-0.5.7.pclplugin",
     "notes": "新增 MC百科搜索、安装/下载两步闸门与 36 个工具；需要 PCL Harness 3.10.x+（API v10）。"
   }
 }
