@@ -1,4 +1,4 @@
-﻿Imports System
+Imports System
 Imports System.Collections.Generic
 Imports System.Globalization
 Imports System.IO
@@ -29,7 +29,7 @@ Namespace PCLHarness.Market
     Friend Class MarketClient
 
         Public Const DefaultIndexUrl As String = "https://raw.githubusercontent.com/Badqf/PCL-Harness-Market/main/index.json"
-        Private Const FreshMinutes As Integer = 10
+        Private Const FreshMinutes As Integer = 3
         Private Const MirrorHostFast As String = "https://ghfast.top/"
         Private Const MirrorHostProxy As String = "https://gh-proxy.com/"
 
@@ -81,7 +81,11 @@ Namespace PCLHarness.Market
             End If
 
             Dim Errors As New List(Of String)
-            Dim Candidates = BuildCandidates(IndexUrl, PreferMirror)
+            ' 索引始终先试官方 raw，避免镜像的缓存让索引比 Release 更旧；
+            ' 官方地址不可达（超时/被墙）时再自动回退到镜像，不把用户卡在 raw。
+            ' 加时间戳绕过 raw/CDN 的 5 分钟缓存，让客户端的 3 分钟 TTL 真正生效。
+            Dim RequestUrl = IndexUrl & If(IndexUrl.Contains("?"), "&", "?") & "_=" & DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+            Dim Candidates = BuildCandidates(RequestUrl, False)
             For I = 0 To Candidates.Count - 1
                 Dim Url = Candidates(I)
                 Ctx.ThrowIfCancelled()

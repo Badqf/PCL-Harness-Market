@@ -1,4 +1,4 @@
-﻿Imports System
+Imports System
 Imports System.Collections.Generic
 Imports System.Linq
 Imports System.Windows
@@ -206,7 +206,7 @@ Namespace PCLHarness.Market
                 New PCL.PluginSetting With {
                     .Key = "preferMirror",
                     .Title = "优先使用镜像",
-                    .Description = "先走 ghfast.top / gh-proxy.com 镜像，失败再直连 GitHub。国内网络建议开启。",
+                    .Description = "安装包与自更新优先走 ghfast.top / gh-proxy.com 镜像；索引仍先试官方 raw，失败自动回退镜像。国内网络建议开启。",
                     .SettingType = PCL.PluginSettingType.Boolean,
                     .DefaultValue = True
                 },
